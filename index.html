@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Kelal Bingo · Global</title>
+    <title>Kelal Bingo · Rooms</title>
 
     <!-- Firebase SDKs (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
@@ -12,7 +12,7 @@
     </script>
 
     <style>
-        /* ===== STYLES – same compact design ===== */
+        /* ===== STYLES – compact & clean ===== */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -47,6 +47,26 @@
         }
         .hidden {
             display: none !important;
+        }
+        .flex-col {
+            display: flex;
+            flex-direction: column;
+        }
+        .flex-1 {
+            flex: 1;
+        }
+        .gap-2 {
+            gap: 8px;
+        }
+        .gap-3 {
+            gap: 12px;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .text-muted {
+            color: #6a8aaa;
+            font-size: 0.7rem;
         }
 
         /* Auth Screen */
@@ -162,7 +182,142 @@
             border: 1px solid rgba(200, 80, 80, 0.3);
         }
 
-        /* Top Bar */
+        /* Mode Selection */
+        .mode-screen {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            padding: 20px 10px;
+            flex: 1;
+            justify-content: center;
+        }
+        .mode-screen h2 {
+            color: #f5e7c8;
+            text-align: center;
+            font-size: 1.4rem;
+            margin-bottom: 4px;
+        }
+        .mode-screen .mode-desc {
+            color: #8ab0c8;
+            text-align: center;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+        }
+        .mode-btn {
+            background: rgba(20, 45, 70, 0.6);
+            border: 2px solid rgba(60, 120, 170, 0.2);
+            border-radius: 24px;
+            padding: 16px 20px;
+            color: #d4e6fa;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+        }
+        .mode-btn:hover {
+            background: rgba(40, 80, 120, 0.4);
+            border-color: rgba(80, 150, 200, 0.4);
+        }
+        .mode-btn:active {
+            transform: scale(0.97);
+        }
+        .mode-btn .icon {
+            font-size: 1.6rem;
+            width: 40px;
+            text-align: center;
+        }
+        .mode-btn .info {
+            flex: 1;
+        }
+        .mode-btn .info .title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f5e7c8;
+        }
+        .mode-btn .info .desc {
+            font-size: 0.7rem;
+            color: #8ab0c8;
+        }
+
+        /* Room Lobby */
+        .lobby-screen {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            padding: 12px 8px;
+            flex: 1;
+            overflow: hidden;
+        }
+        .lobby-screen .room-header {
+            text-align: center;
+        }
+        .lobby-screen .room-code-display {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 30px;
+            padding: 12px;
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #f5c542;
+            letter-spacing: 6px;
+            border: 2px dashed rgba(245, 197, 66, 0.2);
+            font-family: monospace;
+        }
+        .lobby-screen .player-list {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+            min-height: 80px;
+        }
+        .lobby-screen .player-list .player-item {
+            color: #d4e6fa;
+            padding: 6px 10px;
+            border-bottom: 1px solid rgba(60, 120, 170, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .lobby-screen .player-list .player-item .host-badge {
+            color: #f5c542;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+        .lobby-screen .player-list .player-item .ready-badge {
+            font-size: 0.7rem;
+            padding: 2px 10px;
+            border-radius: 20px;
+        }
+        .lobby-screen .player-list .player-item .ready-badge.ready {
+            background: rgba(70, 200, 120, 0.2);
+            color: #7ddfa0;
+        }
+        .lobby-screen .player-list .player-item .ready-badge.waiting {
+            background: rgba(200, 180, 60, 0.15);
+            color: #f5d76e;
+        }
+        .lobby-screen .lobby-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .lobby-screen .lobby-actions button {
+            flex: 1;
+            min-width: 80px;
+        }
+        .lobby-screen .lobby-status {
+            color: #8ab0c8;
+            text-align: center;
+            font-size: 0.8rem;
+            padding: 4px;
+        }
+
+        /* Top Bar (Wallet) */
         .wallet-bar {
             display: flex;
             flex-wrap: wrap;
@@ -272,7 +427,7 @@
             position: absolute;
             top: calc(100% + 10px);
             right: 0;
-            min-width: 220px;
+            min-width: 200px;
             max-height: 70vh;
             overflow-y: auto;
             background: rgba(20, 45, 70, 0.96);
@@ -437,6 +592,17 @@
             display: block;
             font-weight: 400;
             color: #8ab0c8;
+        }
+        .room-badge {
+            display: inline-block;
+            background: rgba(245, 197, 66, 0.15);
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 0.6rem;
+            color: #f5c542;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-top: 2px;
         }
 
         /* Wheel */
@@ -976,6 +1142,46 @@
             box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
         }
 
+        .join-room-input {
+            display: flex;
+            gap: 8px;
+        }
+        .join-room-input input {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: 30px;
+            border: 2px solid rgba(60, 120, 170, 0.25);
+            background: rgba(0, 0, 0, 0.3);
+            color: #d4e6fa;
+            font-size: 1rem;
+            outline: none;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 700;
+        }
+        .join-room-input input:focus {
+            border-color: #f5c542;
+        }
+        .join-room-input input::placeholder {
+            text-transform: none;
+            letter-spacing: 0;
+            font-weight: 400;
+            color: #4a6a8a;
+        }
+        .join-room-input button {
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: none;
+            background: linear-gradient(135deg, #f5c542, #e6a820);
+            color: #1a2a1a;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .join-room-input button:active {
+            transform: scale(0.95);
+        }
+
         /* Responsive */
         @media (max-height:700px) {
             .game-wrapper {
@@ -1036,6 +1242,13 @@
             .modal-content {
                 padding: 20px 16px 18px;
             }
+            .mode-btn {
+                padding: 12px 16px;
+            }
+            .mode-btn .icon {
+                font-size: 1.2rem;
+                width: 30px;
+            }
         }
         @media (max-width:380px) {
             .game-wrapper {
@@ -1087,6 +1300,16 @@
                 padding: 16px 14px 14px;
                 border-radius: 24px;
             }
+            .mode-btn {
+                padding: 10px 14px;
+            }
+            .mode-btn .icon {
+                font-size: 1rem;
+                width: 26px;
+            }
+            .mode-btn .info .title {
+                font-size: 0.85rem;
+            }
         }
     </style>
 </head>
@@ -1095,7 +1318,7 @@
         <!-- ===== AUTH SCREEN ===== -->
         <div id="authScreen" class="auth-screen">
             <div class="logo"><h2>🎯 <span>BINGO</span></h2></div>
-            <div class="subtitle">Global Multiplayer · Bet & Win</div>
+            <div class="subtitle">Global Multiplayer · Rooms</div>
             <div id="authError" class="auth-error"></div>
             <input type="text" id="authUsername" placeholder="Username" maxlength="20" autocomplete="username">
             <input type="password" id="authPassword" placeholder="Password" minlength="4" autocomplete="current-password">
@@ -1107,9 +1330,57 @@
             </div>
         </div>
 
+        <!-- ===== MODE SELECTION ===== -->
+        <div id="modeScreen" class="mode-screen">
+            <h2>🎯 Choose Your Game</h2>
+            <div class="mode-desc">Play with friends in a private room or join the global game</div>
+            <button class="mode-btn" id="globalModeBtn">
+                <span class="icon">🌍</span>
+                <span class="info">
+                    <div class="title">Global Game</div>
+                    <div class="desc">Play with everyone online, no room needed</div>
+                </span>
+            </button>
+            <button class="mode-btn" id="createRoomBtn">
+                <span class="icon">🏠</span>
+                <span class="info">
+                    <div class="title">Create Room</div>
+                    <div class="desc">Host a private room and invite friends</div>
+                </span>
+            </button>
+            <button class="mode-btn" id="joinRoomBtn">
+                <span class="icon">🚪</span>
+                <span class="info">
+                    <div class="title">Join Room</div>
+                    <div class="desc">Enter a room code to join a friend's game</div>
+                </span>
+            </button>
+            <div style="margin-top:8px;display:flex;justify-content:center;">
+                <button class="auth-btn-secondary" id="logoutFromModeBtn" style="width:auto;padding:8px 20px;font-size:0.8rem;">Logout</button>
+            </div>
+        </div>
+
+        <!-- ===== ROOM LOBBY ===== -->
+        <div id="lobbyScreen" class="lobby-screen">
+            <div class="room-header">
+                <div style="color:#8ab0c8;font-size:0.7rem;letter-spacing:1px;">ROOM CODE</div>
+                <div class="room-code-display" id="lobbyRoomCode">------</div>
+                <div style="color:#6a8aaa;font-size:0.6rem;margin-top:2px;">Share this code with friends</div>
+            </div>
+            <div class="player-list" id="lobbyPlayerList">
+                <div class="player-item" style="color:#4a6a8a;text-align:center;justify-content:center;">Waiting for players...</div>
+            </div>
+            <div class="lobby-status" id="lobbyStatus">⏳ Waiting for players to join...</div>
+            <div class="lobby-actions">
+                <button class="auth-btn" id="lobbyStartBtn" style="display:none;">🚀 Start Game</button>
+                <button class="auth-btn-secondary" id="lobbyLeaveBtn">🚪 Leave Room</button>
+            </div>
+        </div>
+
         <!-- ===== GAME SCREEN ===== -->
         <div id="gameScreen">
             <div class="title">✨ <span style="color:#f5c542;">BINGO</span> · <small id="modeLabel">offline</small></div>
+            <div style="text-align:center;"><span class="room-badge" id="gameRoomBadge"></span></div>
 
             <!-- Top Bar -->
             <div class="wallet-bar">
@@ -1153,8 +1424,8 @@
                                     Play</button>
                                 <button class="dropdown-item withdraw" id="withdrawBtn"><span class="icon">🏦</span> Withdraw
                                     from Main</button>
-                                <button class="dropdown-item logout" id="logoutBtn"><span class="icon">🚪</span>
-                                    Logout</button>
+                                <button class="dropdown-item" id="gameLeaveBtn"><span class="icon">🚪</span>
+                                    Leave Game</button>
                             </div>
                         </div>
                     </div>
@@ -1247,7 +1518,7 @@
     <!-- ============================================================ -->
     <script>
         // ============================================================
-        //  FIREBASE CONFIGURATION (hardcoded)
+        //  FIREBASE CONFIGURATION (hardcoded – your credentials)
         // ============================================================
         const firebaseConfig = {
             apiKey: "AIzaSyC1f7Fs1pn8piEy8gmQy2Fs035Xs1Vm1Ik",
@@ -1297,7 +1568,11 @@
         let users = {};
         let gameRef = null;
         let isGameInitialized = false;
+        let currentMode = 'global'; // 'global' | 'room'
+        let currentRoomId = null;
+        let isHost = false;
 
+        // Engine state (shared between global & room)
         let engineState = {
             players: {},
             allTakenNumbers: new Set(),
@@ -1305,19 +1580,27 @@
             winners: [],
             spinCount: 0,
             isSpinning: false,
-            gamePhase: 'selection', // Always 'selection', 'spinning', or 'results'
+            gamePhase: 'selection',
             roundNumber: 1,
             timer: 30,
             activePlayersCount: 0,
             cumulativeRotation: 0,
-            playerNames: []
+            playerNames: [],
+            gameStarted: false
         };
+
+        // Timer loop
+        let timerLoopInterval = null;
+        let isTimerLoopRunning = false;
+        let localTimerCount = 30;
 
         // ============================================================
         //  DOM REFS
         // ============================================================
         const $ = id => document.getElementById(id);
         const authScreen = $('authScreen');
+        const modeScreen = $('modeScreen');
+        const lobbyScreen = $('lobbyScreen');
         const gameScreen = $('gameScreen');
         const authError = $('authError');
         const authUsername = $('authUsername');
@@ -1326,6 +1609,17 @@
         const authSignupBtn = $('authSignupBtn');
         const authSwitch = $('authSwitch');
         const authStatus = $('authStatus');
+        const logoutFromModeBtn = $('logoutFromModeBtn');
+
+        const globalModeBtn = $('globalModeBtn');
+        const createRoomBtn = $('createRoomBtn');
+        const joinRoomBtn = $('joinRoomBtn');
+
+        const lobbyRoomCode = $('lobbyRoomCode');
+        const lobbyPlayerList = $('lobbyPlayerList');
+        const lobbyStatus = $('lobbyStatus');
+        const lobbyStartBtn = $('lobbyStartBtn');
+        const lobbyLeaveBtn = $('lobbyLeaveBtn');
 
         const walletUsername = $('walletUsername');
         const mainWalletEl = $('mainWallet');
@@ -1337,10 +1631,11 @@
         const moreDropdown = $('moreDropdown');
         const statusDot = $('statusDot');
         const modeLabel = $('modeLabel');
+        const gameRoomBadge = $('gameRoomBadge');
 
         const depositBtn = $('depositBtn');
         const withdrawBtn = $('withdrawBtn');
-        const logoutBtn = $('logoutBtn');
+        const gameLeaveBtn = $('gameLeaveBtn');
         const depositModal = $('depositModal');
         const withdrawModal = $('withdrawModal');
         const depositAmount = $('depositAmount');
@@ -1388,23 +1683,45 @@
         //  AUTH
         // ============================================================
         function loadUsers() { users = DB.getUsers(); }
+
         function saveUsers() { DB.saveUsers(users); }
 
         function showAuthScreen() {
             authScreen.style.display = 'flex';
+            modeScreen.style.display = 'none';
+            lobbyScreen.style.display = 'none';
             gameScreen.style.display = 'none';
             authError.textContent = '';
             authUsername.value = '';
             authPassword.value = '';
-            setConnectionStatus(firebaseAvailable, firebaseAvailable ? '🌐 Connected to global game' :
-                '📡 Offline mode – playing locally');
+            setConnectionStatus(firebaseAvailable, firebaseAvailable ? '🌐 Connected' : '📡 Offline');
+        }
+
+        function showModeScreen() {
+            authScreen.style.display = 'none';
+            modeScreen.style.display = 'flex';
+            lobbyScreen.style.display = 'none';
+            gameScreen.style.display = 'none';
+        }
+
+        function showLobbyScreen() {
+            authScreen.style.display = 'none';
+            modeScreen.style.display = 'none';
+            lobbyScreen.style.display = 'flex';
+            gameScreen.style.display = 'none';
         }
 
         function showGameScreen() {
             authScreen.style.display = 'none';
+            modeScreen.style.display = 'none';
+            lobbyScreen.style.display = 'none';
             gameScreen.style.display = 'flex';
-            modeLabel.textContent = isMultiplayer ? 'online' : 'offline';
-            initGameConnection();
+            modeLabel.textContent = currentMode === 'global' ? 'global' : 'room';
+            if (currentMode === 'room' && currentRoomId) {
+                gameRoomBadge.textContent = '🔑 ' + currentRoomId;
+            } else {
+                gameRoomBadge.textContent = '🌍 Global';
+            }
             updateWalletUI();
             updateBetUI();
         }
@@ -1425,7 +1742,11 @@
             currentUser = username;
             DB.setCurrentUser(username);
             authError.textContent = '';
-            showGameScreen();
+            showModeScreen();
+            // Auto-connect to Firebase if available
+            if (firebaseAvailable) {
+                setConnectionStatus(true);
+            }
         }
 
         function handleSignup() {
@@ -1443,15 +1764,22 @@
         }
 
         function handleLogout() {
+            // Clean up Firebase listeners
             if (gameRef) {
-                if (isMultiplayer) {
-                    gameRef.child('players/' + currentUser).remove();
-                    gameRef.off();
-                }
+                gameRef.off();
                 gameRef = null;
+            }
+            if (timerLoopInterval) {
+                clearInterval(timerLoopInterval);
+                timerLoopInterval = null;
+                isTimerLoopRunning = false;
             }
             currentUser = null;
             DB.setCurrentUser(null);
+            currentMode = 'global';
+            currentRoomId = null;
+            isHost = false;
+            isGameInitialized = false;
             showAuthScreen();
             closeMoreDropdown();
         }
@@ -1566,65 +1894,242 @@
         }
 
         // ============================================================
-        //  GAME CONNECTION – ALWAYS RUNNING TIMER
+        //  ROOM / GAME MANAGEMENT
         // ============================================================
-        let timerLoopInterval = null;
-        let isTimerLoopRunning = false;
+        function generateRoomCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
 
-        function initGameConnection() {
+        function createRoom() {
+            const code = generateRoomCode();
+            currentRoomId = code;
+            isHost = true;
+            currentMode = 'room';
+            const roomData = {
+                host: currentUser,
+                gameState: 'lobby',
+                round: 1,
+                timer: 30,
+                drawnNumbers: [],
+                winners: [],
+                spinCount: 0,
+                cumulativeRotation: 0,
+                players: {},
+                gameStarted: false
+            };
+            roomData.players[currentUser] = { name: currentUser, picks: [], bet: parseInt(betSelect.value), ready: false };
+
+            const roomRef = database.ref('rooms/' + code);
+            roomRef.set(roomData).then(() => {
+                enterRoom(code);
+            }).catch(err => {
+                console.error('Create room error:', err);
+                alert('Failed to create room. Please try again.');
+            });
+        }
+
+        function joinRoom(code) {
+            if (!code) {
+                // Show a prompt or modal
+                const entered = prompt('Enter room code:');
+                if (!entered) return;
+                code = entered.trim().toUpperCase();
+                if (code.length < 4) { alert('Invalid room code.'); return; }
+            }
+            currentRoomId = code;
+            currentMode = 'room';
+            isHost = false;
+            const roomRef = database.ref('rooms/' + code);
+            roomRef.once('value', snapshot => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    // Add player
+                    const updates = {};
+                    updates['players/' + currentUser] = { name: currentUser, picks: [], bet: parseInt(betSelect.value),
+                        ready: false };
+                    roomRef.update(updates).then(() => {
+                        enterRoom(code);
+                    }).catch(err => {
+                        console.error('Join room error:', err);
+                        alert('Failed to join room.');
+                    });
+                } else {
+                    alert('Room not found. Please check the code.');
+                }
+            });
+        }
+
+        function enterRoom(code) {
+            showLobbyScreen();
+            lobbyRoomCode.textContent = code;
+            lobbyStartBtn.style.display = 'none';
+
+            // Listen for room changes
+            const roomRef = database.ref('rooms/' + code);
+            gameRef = roomRef;
+
+            roomRef.on('value', snapshot => {
+                const data = snapshot.val();
+                if (!data) {
+                    // Room deleted
+                    lobbyStatus.textContent = '❌ Room no longer exists.';
+                    setTimeout(() => { leaveRoom(); }, 2000);
+                    return;
+                }
+                updateLobbyUI(data);
+            });
+
+            // Set up disconnect cleanup
+            roomRef.child('players/' + currentUser).onDisconnect().remove();
+        }
+
+        function updateLobbyUI(data) {
+            const players = data.players || {};
+            const playerNames = Object.keys(players);
+            const isHostPlayer = data.host === currentUser;
+
+            // Update player list
+            let html = '';
+            if (playerNames.length === 0) {
+                html = '<div class="player-item" style="color:#4a6a8a;text-align:center;justify-content:center;">No players yet...</div>';
+            } else {
+                playerNames.forEach(name => {
+                    const p = players[name];
+                    const isHostBadge = data.host === name ? '👑' : '';
+                    const readyText = p.ready ? '✅ Ready' : '⏳ Selecting';
+                    const readyClass = p.ready ? 'ready' : 'waiting';
+                    html += `
+                        <div class="player-item">
+                            <span>${name} ${isHostBadge}</span>
+                            <span class="ready-badge ${readyClass}">${readyText}</span>
+                        </div>
+                    `;
+                });
+            }
+            lobbyPlayerList.innerHTML = html;
+
+            // Update status
+            const count = playerNames.length;
+            const minPlayers = 2;
+            if (count < minPlayers) {
+                lobbyStatus.textContent = `⏳ Waiting for players... (${count}/${minPlayers})`;
+                lobbyStartBtn.style.display = 'none';
+            } else {
+                lobbyStatus.textContent = `✅ ${count} players ready!`;
+                if (isHostPlayer) {
+                    lobbyStartBtn.style.display = 'block';
+                    lobbyStartBtn.textContent = data.gameStarted ? '🔄 Game in Progress...' : '🚀 Start Game';
+                    lobbyStartBtn.disabled = data.gameStarted;
+                } else {
+                    lobbyStartBtn.style.display = 'none';
+                }
+            }
+
+            // If game has started, transition to game screen
+            if (data.gameStarted && data.gameState !== 'lobby') {
+                showGameScreen();
+                // Initialize game with room data
+                initGameConnection('room', data);
+            }
+        }
+
+        function leaveRoom() {
+            if (gameRef) {
+                gameRef.child('players/' + currentUser).remove();
+                gameRef.off();
+                gameRef = null;
+            }
+            if (currentRoomId) {
+                // Check if room is empty, then delete it
+                const roomRef = database.ref('rooms/' + currentRoomId);
+                roomRef.once('value', snapshot => {
+                    const data = snapshot.val();
+                    if (data && data.players && Object.keys(data.players).length === 0) {
+                        roomRef.remove();
+                    }
+                });
+            }
+            currentRoomId = null;
+            isHost = false;
+            currentMode = 'global';
+            if (timerLoopInterval) {
+                clearInterval(timerLoopInterval);
+                timerLoopInterval = null;
+                isTimerLoopRunning = false;
+            }
+            isGameInitialized = false;
+            showModeScreen();
+        }
+
+        // ============================================================
+        //  GAME CONNECTION (Global or Room)
+        // ============================================================
+        function initGameConnection(mode, roomData) {
             if (isGameInitialized) return;
             isGameInitialized = true;
 
-            if (isMultiplayer && database) {
+            if (mode === 'global') {
+                // Global mode
+                currentMode = 'global';
+                currentRoomId = null;
                 gameRef = database.ref('globalGame');
-
                 // Listen for game data
                 gameRef.on('value', snapshot => {
                     const data = snapshot.val();
                     if (data) {
                         syncGameState(data);
                     } else {
-                        // Initialize game with a perpetual timer
                         initializeGlobalGame();
                     }
                 });
-
                 // On disconnect, remove player
                 gameRef.child('players/' + currentUser).onDisconnect().remove();
                 updatePlayerInGame();
-
-                // Listen for gameState changes (for UI updates)
-                gameRef.child('gameState').on('value', snap => {
-                    const state = snap.val();
-                    if (state) {
-                        engineState.gamePhase = state;
-                        if (state === 'spinning') spinningIndicator.classList.add('active');
-                        else spinningIndicator.classList.remove('active');
-                        updateUIFromState();
-                    }
-                });
-
                 setConnectionStatus(true, '🌐 Connected to global game');
             } else {
-                // Local single-player mode – timer always runs too
-                setConnectionStatus(false, '📡 Offline mode – playing locally');
-                initializeLocalGame();
+                // Room mode – we already have roomData
+                if (roomData) {
+                    syncGameState(roomData);
+                } else {
+                    // If no roomData, listen for it
+                    if (gameRef) {
+                        gameRef.on('value', snapshot => {
+                            const data = snapshot.val();
+                            if (data) {
+                                syncGameState(data);
+                            }
+                        });
+                    }
+                }
+                setConnectionStatus(true, '🔑 Connected to room');
+            }
+
+            // Start timer loop
+            if (!isTimerLoopRunning) {
+                startTimerLoop();
             }
         }
 
         function initializeGlobalGame() {
             const initData = {
                 players: {},
-                gameState: 'selection', // Always selection to keep timer running
+                gameState: 'selection',
                 round: 1,
                 timer: 30,
                 drawnNumbers: [],
                 winners: [],
                 spinCount: 0,
-                cumulativeRotation: 0
+                cumulativeRotation: 0,
+                gameStarted: true
             };
             gameRef.set(initData);
-            // The timer will start when the data is synced via syncGameState
+            // Also add current player
+            updatePlayerInGame();
         }
 
         function updatePlayerInGame() {
@@ -1654,6 +2159,7 @@
             engineState.spinCount = data.spinCount || 0;
             engineState.cumulativeRotation = data.cumulativeRotation || 0;
             engineState.activePlayersCount = playerNames.length;
+            engineState.gameStarted = data.gameStarted || false;
 
             // Rebuild taken numbers
             const allTaken = new Set();
@@ -1666,245 +2172,98 @@
             const myBet = (players[currentUser] && players[currentUser].bet) || 50;
             engineState.userBetAmount = myBet;
 
+            // Check if we have enough players (for rooms)
+            if (currentMode === 'room' && currentRoomId) {
+                const minPlayers = 2;
+                if (playerNames.length < minPlayers && engineState.gamePhase === 'selection') {
+                    // Don't spin if not enough players – reset timer
+                    if (engineState.timer <= 0) {
+                        // Reset timer in Firebase
+                        gameRef.update({ timer: 30 });
+                    }
+                }
+            }
+
             updateUIFromState();
 
-            // Ensure the timer loop is running (if in selection)
-            if (engineState.gamePhase === 'selection' && !isTimerLoopRunning) {
-                startTimerLoop();
+            // If game is in selection and timer is running, make sure UI shows it
+            if (engineState.gamePhase === 'selection') {
+                // Ensure timer display is updated
+                timerDisplay.textContent = engineState.timer;
             }
-            // If the game is in 'results', we might want to reset after delay
-            if (engineState.gamePhase === 'results') {
-                // The reset is handled by the timer loop after a timeout
-                // We'll schedule the reset here if it's not already scheduled
-                if (!window._resetScheduled) {
-                    window._resetScheduled = true;
-                    setTimeout(() => {
-                        // Reset game after showing winners
-                        gameRef.update({
-                            gameState: 'selection',
-                            round: engineState.roundNumber + 1,
-                            timer: 30,
-                            drawnNumbers: [],
-                            winners: [],
-                            spinCount: 0,
-                            cumulativeRotation: 0
-                        });
-                        // Also clear all players' picks
-                        const updates = {};
-                        const playerNames2 = Object.keys(engineState.players);
-                        playerNames2.forEach(name => {
-                            updates['players/' + name + '/picks'] = [];
-                            updates['players/' + name + '/ready'] = false;
-                        });
-                        gameRef.update(updates);
-                        window._resetScheduled = false;
-                    }, 5000); // 5 seconds after results appear
+
+            // Auto-start: if in lobby and gameStarted is false but we have players, start
+            if (engineState.gamePhase === 'lobby' && playerNames.length > 0 && !engineState.gameStarted) {
+                // If in room mode and host, or global mode
+                if (currentMode === 'global' || (currentMode === 'room' && isHost)) {
+                    gameRef.update({
+                        gameState: 'selection',
+                        timer: 30,
+                        gameStarted: true
+                    });
                 }
+            }
+
+            // If timer hits 0 in selection and we have players, trigger spin
+            if (engineState.gamePhase === 'selection' && engineState.timer <= 0 && engineState.activePlayersCount >= (currentMode ===
+                    'room' ? 2 : 1)) {
+                if (currentMode === 'global' || isHost || currentMode === 'room' && !isHost) {
+                    // The timer loop handles this, but we double-check
+                    gameRef.update({ gameState: 'spinning' });
+                    setTimeout(() => {
+                        if (engineState.gamePhase === 'spinning') {
+                            executeSpin();
+                        }
+                    }, 500);
+                }
+            }
+
+            // If no players in global mode and timer hits 0, just reset
+            if (currentMode === 'global' && engineState.gamePhase === 'selection' && engineState.timer <= 0 && engineState
+                .activePlayersCount === 0) {
+                gameRef.update({ timer: 30 });
             }
         }
 
         // ============================================================
-        //  PERPETUAL TIMER LOOP (Multiplayer)
+        //  PERPETUAL TIMER LOOP
         // ============================================================
         function startTimerLoop() {
             if (timerLoopInterval) clearInterval(timerLoopInterval);
             isTimerLoopRunning = true;
 
             timerLoopInterval = setInterval(() => {
-                // Only run if game is in selection and we are online
+                // Only run if game is in selection
                 if (engineState.gamePhase !== 'selection') {
-                    // If game is not in selection, stop the timer (will be restarted when reset)
-                    if (engineState.gamePhase === 'results') {
-                        // Timer may be stopped, but reset is scheduled separately
-                    }
                     return;
                 }
 
                 // Decrement timer via Firebase transaction
-                gameRef.child('timer').transaction(current => {
-                    if (current === null || current === undefined) return 30;
-                    if (current <= 0) {
-                        // Timer hit zero – trigger spin
-                        return 0;
-                    }
-                    return current - 1;
-                }, (error, committed, snapshot) => {
-                    if (error) {
-                        console.warn('Timer transaction error:', error);
-                        return;
-                    }
-                    if (committed && snapshot) {
-                        const newVal = snapshot.val();
-                        if (newVal === 0) {
-                            // Trigger spin
-                            gameRef.update({ gameState: 'spinning' });
-                            // The spin will be executed by the gameState listener or we can call it directly
-                            setTimeout(() => {
-                                if (engineState.gamePhase === 'spinning') {
-                                    executeSpin();
-                                }
-                            }, 500);
+                if (gameRef) {
+                    gameRef.child('timer').transaction(current => {
+                        if (current === null || current === undefined) return 30;
+                        if (current <= 0) return 0;
+                        return current - 1;
+                    }, (error, committed, snapshot) => {
+                        if (error) {
+                            console.warn('Timer transaction error:', error);
+                            return;
                         }
-                    }
-                });
-            }, 1000);
-        }
-
-        // ============================================================
-        //  LOCAL SINGLE-PLAYER MODE (timer always runs)
-        // ============================================================
-        let localTimerInterval2 = null;
-        let localTimerCount = 30;
-        let isLocalTimerRunning = false;
-
-        function initializeLocalGame() {
-            engineState.players = { [currentUser]: { name: currentUser, picks: [], bet: 50, ready: false } };
-            engineState.playerNames = [currentUser];
-            engineState.gamePhase = 'selection';
-            engineState.roundNumber = 1;
-            engineState.timer = 30;
-            engineState.drawnNumbers = [];
-            engineState.winners = [];
-            engineState.spinCount = 0;
-            engineState.cumulativeRotation = 0;
-            engineState.activePlayersCount = 1;
-            engineState.allTakenNumbers = new Set();
-            updateUIFromState();
-            startLocalTimerLoop();
-        }
-
-        function startLocalTimerLoop() {
-            if (localTimerInterval2) clearInterval(localTimerInterval2);
-            isLocalTimerRunning = true;
-            localTimerCount = 30;
-            engineState.timer = 30;
-            timerDisplay.textContent = 30;
-
-            localTimerInterval2 = setInterval(() => {
-                // If game is not in selection, stop the loop (will be restarted after reset)
-                if (engineState.gamePhase !== 'selection') {
-                    if (engineState.gamePhase === 'results') {
-                        // Wait for reset
-                    }
-                    return;
-                }
-                localTimerCount--;
-                engineState.timer = localTimerCount;
-                timerDisplay.textContent = localTimerCount;
-                if (localTimerCount <= 0) {
-                    clearInterval(localTimerInterval2);
-                    localTimerInterval2 = null;
-                    isLocalTimerRunning = false;
-                    if (engineState.gamePhase === 'selection') {
-                        engineState.gamePhase = 'spinning';
-                        updateUIFromState();
-                        setTimeout(() => { executeLocalSpin(); }, 500);
-                    }
+                        if (committed && snapshot) {
+                            const newVal = snapshot.val();
+                            if (newVal === 0) {
+                                // Trigger spin
+                                gameRef.update({ gameState: 'spinning' });
+                                setTimeout(() => {
+                                    if (engineState.gamePhase === 'spinning') {
+                                        executeSpin();
+                                    }
+                                }, 500);
+                            }
+                        }
+                    });
                 }
             }, 1000);
-        }
-
-        function executeLocalSpin() {
-            if (engineState.gamePhase === 'spinning' && !engineState.isSpinning) {
-                engineState.isSpinning = true;
-                spinningIndicator.classList.add('active');
-                const numbers = Array.from(engineState.allTakenNumbers);
-                if (numbers.length === 0) {
-                    updateStatus('❌ No numbers chosen!');
-                    engineState.gamePhase = 'results';
-                    updateUIFromState();
-                    setTimeout(() => { resetLocalGame(); }, 3000);
-                    return;
-                }
-                const available = numbers.filter(n => !engineState.drawnNumbers.includes(n));
-                if (available.length === 0) {
-                    updateStatus('⚡ All numbers drawn!');
-                    engineState.gamePhase = 'results';
-                    updateUIFromState();
-                    setTimeout(() => { resetLocalGame(); }, 3000);
-                    return;
-                }
-                const winningNumber = available[Math.floor(Math.random() * available.length)];
-                const targetAngle = getAngleForNumber(winningNumber);
-                const fullRotations = 4 + engineState.spinCount;
-                let newRotation = engineState.cumulativeRotation + 360 * fullRotations;
-                const currentAngle = newRotation % 360;
-                let adjustment = (targetAngle - currentAngle + 360) % 360;
-                if (adjustment < 10) adjustment += 360;
-                newRotation += adjustment;
-                engineState.cumulativeRotation = newRotation;
-                engineState.drawnNumbers.push(winningNumber);
-                engineState.spinCount++;
-                arrowContainer.style.transform = `rotate(${newRotation}deg)`;
-                arrowCenter.textContent = winningNumber;
-                arrowCenter.classList.add('reveal');
-                spinEls[engineState.spinCount - 1].textContent = winningNumber;
-                spinEls[engineState.spinCount - 1].classList.add('reveal', 'active');
-                updateStatus(`Spin ${engineState.spinCount}/3: <span class="highlight">${winningNumber}</span>`);
-                updateWheel();
-
-                setTimeout(() => {
-                    spinningIndicator.classList.remove('active');
-                    engineState.isSpinning = false;
-                    if (engineState.spinCount >= 3) {
-                        engineState.gamePhase = 'results';
-                        updateUIFromState();
-                        checkLocalWinners();
-                    } else {
-                        // Continue spinning after a delay (but we need to reset timer for next spin)
-                        // For local, we'll simply call spin again after 1.5s
-                        setTimeout(() => { executeLocalSpin(); }, 1500);
-                    }
-                }, 3500);
-            }
-        }
-
-        function checkLocalWinners() {
-            const playerPicks = engineState.players[currentUser]?.picks || [];
-            const hasWin = playerPicks.some(num => engineState.drawnNumbers.includes(num));
-            const betAmount = parseInt(betSelect.value);
-            const winAmount = betAmount * 1;
-            if (hasWin) {
-                creditWinningsToMain(winAmount);
-                updateStatus(`🎉 You won! +${winAmount} coins (bet × 1)`, true);
-            } else {
-                if (deductBetFromPlay(betAmount)) {
-                    updateStatus(`😔 You lost. -${betAmount} coins.`, false);
-                }
-            }
-            winnersList.innerHTML = hasWin ?
-                `<div class="winner-entry"><span class="player-name">${currentUser}</span><span class="winning-nums">🎯 ${playerPicks.filter(n => engineState.drawnNumbers.includes(n)).join(', ')}</span></div>` :
-                `<div class="no-winners">😔 No winners this round.</div>`;
-            winnersModal.classList.add('active');
-            setTimeout(() => {
-                winnersModal.classList.remove('active');
-                resetLocalGame();
-            }, 5000);
-        }
-
-        function resetLocalGame() {
-            if (engineState.players[currentUser]) {
-                engineState.players[currentUser].picks = [];
-            }
-            engineState.allTakenNumbers = new Set();
-            engineState.drawnNumbers = [];
-            engineState.winners = [];
-            engineState.spinCount = 0;
-            engineState.cumulativeRotation = 0;
-            engineState.gamePhase = 'selection';
-            engineState.roundNumber++;
-            engineState.timer = 30;
-            engineState.isSpinning = false;
-            spinningIndicator.classList.remove('active');
-            arrowContainer.style.transition = 'none';
-            arrowContainer.style.transform = 'rotate(0deg)';
-            arrowCenter.textContent = '🎯';
-            arrowCenter.classList.remove('reveal');
-            spinEls.forEach(el => { el.textContent = '•';
-                el.classList.remove('active', 'winner', 'reveal'); });
-            document.querySelectorAll('.wheel-number.highlighted').forEach(el => el.classList.remove('highlighted'));
-            updateUIFromState();
-            startLocalTimerLoop();
         }
 
         // ============================================================
@@ -1915,23 +2274,22 @@
             timerDisplay.textContent = engineState.timer;
             playerCountEl.textContent = engineState.activePlayersCount;
 
-            const phaseLabels = { 'selection': '⏳ Selecting', 'spinning': '🎡 Spinning', 'results': '🏆 Results' };
+            const phaseLabels = { 'lobby': '⏳ Waiting', 'selection': '⏳ Selecting', 'spinning': '🎡 Spinning',
+                'results': '🏆 Results' };
             gamePhaseLabel.textContent = phaseLabels[engineState.gamePhase] || '⏳';
 
-            if (engineState.gamePhase === 'selection' || engineState.gamePhase === 'lobby') {
+            // Show/hide wheel based on game state
+            if (engineState.gamePhase === 'lobby') {
+                wheelContainer.classList.add('hidden');
+                spinResults.classList.add('hidden');
+                updateStatus('⏳ Waiting for game to start...');
+            } else {
                 wheelContainer.classList.remove('hidden');
                 spinResults.classList.remove('hidden');
-                // Show wheel but no spinning indicator
-                spinningIndicator.classList.remove('active');
-            } else if (engineState.gamePhase === 'spinning') {
-                wheelContainer.classList.remove('hidden');
-                spinResults.classList.remove('hidden');
-                spinningIndicator.classList.add('active');
-            } else if (engineState.gamePhase === 'results') {
-                wheelContainer.classList.remove('hidden');
-                spinResults.classList.remove('hidden');
-                spinningIndicator.classList.remove('active');
             }
+
+            if (engineState.gamePhase === 'spinning') spinningIndicator.classList.add('active');
+            else spinningIndicator.classList.remove('active');
 
             renderNumberPicker();
             updateWheel();
@@ -1944,6 +2302,12 @@
                     spinEls[idx].classList.add('active');
                 }
             });
+
+            // Show waiting message for rooms with < 2 players
+            if (currentMode === 'room' && currentRoomId && engineState.activePlayersCount < 2 && engineState.gamePhase ===
+                'selection') {
+                updateStatus(`⏳ Waiting for ${2 - engineState.activePlayersCount} more player(s)...`);
+            }
         }
 
         // ============================================================
@@ -1958,11 +2322,15 @@
             const wallet = getWallet(currentUser);
             const betLock = bet > wallet.play;
 
+            // For rooms, also check if we have enough players
+            const minPlayers = 2;
+            const enoughPlayers = currentMode !== 'room' || engineState.activePlayersCount >= minPlayers;
+
             let html = '';
             for (let i = 1; i <= 200; i++) {
                 const isSelected = myPicks.includes(i);
                 const isTaken = engineState.allTakenNumbers.has(i) && !isSelected;
-                const disabled = isTaken || (myPicks.length >= 5 && !isSelected) || isLocked || betLock;
+                const disabled = isTaken || (myPicks.length >= 5 && !isSelected) || isLocked || betLock || !enoughPlayers;
 
                 let cls = 'num-btn';
                 if (isSelected) cls += ' selected';
@@ -1985,6 +2353,12 @@
             const wallet = getWallet(currentUser);
             if (bet > wallet.play) {
                 updateStatus(`⚠️ Bet (${bet}) exceeds play balance (${wallet.play}).`);
+                return;
+            }
+
+            // Check if enough players (room mode)
+            if (currentMode === 'room' && engineState.activePlayersCount < 2) {
+                updateStatus(`⏳ Need ${2 - engineState.activePlayersCount} more player(s) to start.`);
                 return;
             }
 
@@ -2015,13 +2389,15 @@
             });
             engineState.allTakenNumbers = allTaken;
 
-            if (isMultiplayer && gameRef) {
-                gameRef.child('players/' + currentUser + '/picks').set(newPicks);
+            if (gameRef) {
+                const path = currentMode === 'global' ? 'globalGame' : 'rooms/' + currentRoomId;
+                const ref = currentMode === 'global' ? gameRef : database.ref(path);
+                ref.child('players/' + currentUser + '/picks').set(newPicks);
                 if (newPicks.length === 5) {
-                    gameRef.child('players/' + currentUser + '/ready').set(true);
+                    ref.child('players/' + currentUser + '/ready').set(true);
                     updateStatus(`✅ ${currentUser} is ready!`);
                 } else {
-                    gameRef.child('players/' + currentUser + '/ready').set(false);
+                    ref.child('players/' + currentUser + '/ready').set(false);
                 }
             }
 
@@ -2031,8 +2407,10 @@
 
         betSelect.addEventListener('change', () => {
             const bet = parseInt(betSelect.value);
-            if (isMultiplayer && gameRef) {
-                gameRef.child('players/' + currentUser + '/bet').set(bet);
+            if (gameRef) {
+                const path = currentMode === 'global' ? 'globalGame' : 'rooms/' + currentRoomId;
+                const ref = currentMode === 'global' ? gameRef : database.ref(path);
+                ref.child('players/' + currentUser + '/bet').set(bet);
             }
             engineState.userBetAmount = bet;
             updateBetUI();
@@ -2085,24 +2463,36 @@
         }
 
         // ============================================================
-        //  MULTIPLAYER SPIN
+        //  SPIN EXECUTION
         // ============================================================
         function executeSpin() {
             if (engineState.gamePhase !== 'spinning') return;
             if (engineState.isSpinning) return;
+
+            // Check if we have enough players (room mode)
+            if (currentMode === 'room' && engineState.activePlayersCount < 2) {
+                // Not enough players – reset to selection
+                const ref = currentMode === 'global' ? gameRef : database.ref('rooms/' + currentRoomId);
+                ref.update({ gameState: 'selection', timer: 30 });
+                updateStatus(`⏳ Waiting for more players...`);
+                return;
+            }
+
             engineState.isSpinning = true;
             spinningIndicator.classList.add('active');
 
             const numbers = Array.from(engineState.allTakenNumbers);
             if (numbers.length === 0) {
                 updateStatus('❌ No numbers chosen!');
-                gameRef.update({ gameState: 'results', timer: 5 });
+                const ref = currentMode === 'global' ? gameRef : database.ref('rooms/' + currentRoomId);
+                ref.update({ gameState: 'results', timer: 5 });
                 return;
             }
             const available = numbers.filter(n => !engineState.drawnNumbers.includes(n));
             if (available.length === 0) {
                 updateStatus('⚡ All numbers drawn!');
-                gameRef.update({ gameState: 'results', timer: 5 });
+                const ref = currentMode === 'global' ? gameRef : database.ref('rooms/' + currentRoomId);
+                ref.update({ gameState: 'results', timer: 5 });
                 return;
             }
 
@@ -2119,7 +2509,8 @@
             engineState.drawnNumbers.push(winningNumber);
             engineState.spinCount++;
 
-            gameRef.update({
+            const ref = currentMode === 'global' ? gameRef : database.ref('rooms/' + currentRoomId);
+            ref.update({
                 drawnNumbers: engineState.drawnNumbers,
                 spinCount: engineState.spinCount,
                 cumulativeRotation: newRotation,
@@ -2138,24 +2529,148 @@
                 spinningIndicator.classList.remove('active');
                 engineState.isSpinning = false;
                 if (engineState.spinCount >= 3) {
-                    gameRef.update({ gameState: 'results' });
-                    // Winners will be handled in syncGameState
+                    ref.update({ gameState: 'results' });
+                    // Check winners after delay
+                    setTimeout(() => {
+                        checkAndAnnounceWinners();
+                    }, 1000);
                 } else {
-                    gameRef.update({ gameState: 'selection', timer: 30 });
+                    ref.update({ gameState: 'selection', timer: 30 });
                 }
             }, 3500);
         }
 
         // ============================================================
-        //  INIT
+        //  WINNERS
+        // ============================================================
+        function checkAndAnnounceWinners() {
+            const players = engineState.players;
+            const playerNames = Object.keys(players);
+            const winners = [];
+            playerNames.forEach(name => {
+                const picks = players[name]?.picks || [];
+                if (picks.some(num => engineState.drawnNumbers.includes(num))) {
+                    winners.push(name);
+                }
+            });
+
+            const ref = currentMode === 'global' ? gameRef : database.ref('rooms/' + currentRoomId);
+            ref.update({ winners: winners });
+
+            const betAmount = parseInt(betSelect.value);
+            const winAmount = betAmount * Math.max(1, playerNames.length);
+
+            winners.forEach(name => {
+                if (name === currentUser) {
+                    creditWinningsToMain(winAmount);
+                    updateStatus(`🎉 You won! +${winAmount} coins (${betAmount} × ${playerNames.length} players)`,
+                    true);
+                }
+            });
+
+            if (winners.length === 0) {
+                winnersList.innerHTML = `<div class="no-winners">😔 No winners this round.</div>`;
+            } else {
+                let html = '';
+                winners.forEach(name => {
+                    const picks = players[name]?.picks || [];
+                    const winningNums = picks.filter(num => engineState.drawnNumbers.includes(num));
+                    html += `
+                        <div class="winner-entry">
+                            <span class="player-name">${name}</span>
+                            <span class="winning-nums">🎯 ${winningNums.join(', ')}</span>
+                        </div>
+                    `;
+                });
+                winnersList.innerHTML = html;
+            }
+            winnersModal.classList.add('active');
+
+            setTimeout(() => {
+                winnersModal.classList.remove('active');
+                // Reset for next round
+                const updates = {
+                    gameState: 'selection',
+                    round: engineState.roundNumber + 1,
+                    timer: 30,
+                    drawnNumbers: [],
+                    winners: [],
+                    spinCount: 0,
+                    cumulativeRotation: 0
+                };
+                const playerNames2 = Object.keys(engineState.players);
+                playerNames2.forEach(name => {
+                    updates['players/' + name + '/picks'] = [];
+                    updates['players/' + name + '/ready'] = false;
+                });
+                ref.update(updates);
+                updateStatus(`⏳ Round ${engineState.roundNumber + 1}: Select 5 numbers`);
+            }, 5000);
+        }
+
+        // ============================================================
+        //  EVENT BINDINGS
         // ============================================================
         function init() {
             authLoginBtn.onclick = handleLogin;
             authSignupBtn.onclick = handleSignup;
             authSwitch.onclick = toggleAuthMode;
 
+            // Mode buttons
+            globalModeBtn.onclick = () => {
+                currentMode = 'global';
+                currentRoomId = null;
+                isHost = false;
+                showGameScreen();
+                if (gameRef) gameRef.off();
+                gameRef = null;
+                isGameInitialized = false;
+                // Clean up any previous room listeners
+                initGameConnection('global');
+            };
+
+            createRoomBtn.onclick = () => {
+                if (!firebaseAvailable) {
+                    alert('Firebase not available. Please check your connection.');
+                    return;
+                }
+                createRoom();
+            };
+
+            joinRoomBtn.onclick = () => {
+                if (!firebaseAvailable) {
+                    alert('Firebase not available. Please check your connection.');
+                    return;
+                }
+                const code = prompt('Enter room code:');
+                if (code) {
+                    joinRoom(code.trim().toUpperCase());
+                }
+            };
+
+            logoutFromModeBtn.onclick = handleLogout;
+
+            // Lobby buttons
+            lobbyStartBtn.onclick = () => {
+                if (gameRef && currentRoomId) {
+                    // Start the game
+                    gameRef.update({
+                        gameState: 'selection',
+                        timer: 30,
+                        gameStarted: true
+                    });
+                    // Transition to game screen
+                    showGameScreen();
+                    initGameConnection('room');
+                }
+            };
+
+            lobbyLeaveBtn.onclick = leaveRoom;
+
+            // More menu
             moreBtn.onclick = toggleMoreDropdown;
 
+            // Wallet actions
             depositBtn.onclick = () => {
                 const wallet = getWallet(currentUser);
                 depositPlayBalance.textContent = wallet.play;
@@ -2172,7 +2687,26 @@
                 withdrawModal.classList.add('active');
                 closeMoreDropdown();
             };
-            logoutBtn.onclick = handleLogout;
+            gameLeaveBtn.onclick = () => {
+                if (currentMode === 'room') {
+                    leaveRoom();
+                } else {
+                    // Leave global game – go back to mode screen
+                    if (gameRef) {
+                        gameRef.child('players/' + currentUser).remove();
+                        gameRef.off();
+                        gameRef = null;
+                    }
+                    if (timerLoopInterval) {
+                        clearInterval(timerLoopInterval);
+                        timerLoopInterval = null;
+                        isTimerLoopRunning = false;
+                    }
+                    isGameInitialized = false;
+                    showModeScreen();
+                }
+                closeMoreDropdown();
+            };
 
             depositConfirm.onclick = () => { depositToPlay(parseInt(depositAmount.value)); };
             depositCancel.onclick = () => { depositModal.classList.remove('active'); };
@@ -2183,12 +2717,14 @@
             loadUsers();
             if (savedUser && users[savedUser]) {
                 currentUser = savedUser;
-                showGameScreen();
+                showModeScreen();
+                if (firebaseAvailable) setConnectionStatus(true);
             } else {
                 showAuthScreen();
             }
         }
 
+        // Start the app
         init();
     </script>
 </body>
