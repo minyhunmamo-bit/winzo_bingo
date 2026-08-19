@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>WINZO BINGO· Rooms</title>
+    <title>Kelal Bingo · Rooms</title>
+
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js">
+    </script>
 
     <!-- Firebase SDKs (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
@@ -49,7 +53,7 @@
             display: none !important;
         }
 
-        /* ===== Auth Screen (First Time Login) ===== */
+        /* ===== Auth Screen ===== */
         .auth-screen {
             display: flex;
             flex-direction: column;
@@ -77,15 +81,6 @@
             text-align: center;
             font-size: 0.8rem;
             letter-spacing: 1px;
-        }
-        .auth-screen .telegram-info {
-            color: #7ddfa0;
-            text-align: center;
-            font-size: 0.8rem;
-            background: rgba(70, 200, 120, 0.1);
-            padding: 8px;
-            border-radius: 30px;
-            border: 1px solid rgba(70, 200, 120, 0.2);
         }
         .auth-screen input {
             background: #0a1a2a;
@@ -139,8 +134,26 @@
             min-height: 1.3rem;
             font-weight: 500;
         }
+        .connection-status {
+            text-align: center;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 30px;
+            display: inline-block;
+            margin: 0 auto;
+        }
+        .connection-status.online {
+            background: rgba(70, 200, 120, 0.2);
+            color: #7ddfa0;
+            border: 1px solid rgba(70, 200, 120, 0.3);
+        }
+        .connection-status.offline {
+            background: rgba(200, 80, 80, 0.2);
+            color: #ff8a8a;
+            border: 1px solid rgba(200, 80, 80, 0.3);
+        }
 
-        /* ===== Welcome Screen (Bet Selection) ===== */
+        /* ===== Welcome Screen ===== */
         .welcome-screen {
             display: none;
             flex-direction: column;
@@ -213,6 +226,21 @@
         .welcome-screen .wallet-info .amount {
             color: #f5c542;
             font-weight: 700;
+        }
+        .welcome-screen .logout-btn {
+            background: rgba(40, 80, 120, 0.3);
+            border: 1px solid rgba(60, 120, 170, 0.15);
+            border-radius: 30px;
+            padding: 8px 20px;
+            color: #8ab0c8;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+        .welcome-screen .logout-btn:hover {
+            background: rgba(200, 70, 70, 0.15);
+            color: #ff8a8a;
         }
 
         /* ===== Top Bar (Wallet & Game Info) ===== */
@@ -446,6 +474,49 @@
             font-weight: 700;
             letter-spacing: 1px;
             margin-top: 1px;
+        }
+
+        /* ===== Bet Switcher ===== */
+        .bet-switcher {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            background: rgba(10, 26, 42, 0.4);
+            backdrop-filter: blur(8px);
+            border-radius: 30px;
+            padding: 3px 12px;
+            margin: 2px 0 3px;
+            border: 1px solid rgba(60, 120, 170, 0.12);
+            flex-shrink: 0;
+        }
+        .bet-switcher .label {
+            color: #8ab0c8;
+            font-size: 0.6rem;
+            font-weight: 600;
+        }
+        .bet-switcher .bet-btn {
+            background: rgba(40, 80, 120, 0.3);
+            border: 2px solid rgba(60, 120, 170, 0.2);
+            border-radius: 20px;
+            padding: 2px 14px;
+            color: #b0c8d8;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .bet-switcher .bet-btn:hover {
+            background: rgba(40, 80, 120, 0.5);
+        }
+        .bet-switcher .bet-btn.active {
+            background: rgba(245, 197, 66, 0.2);
+            border-color: #f5c542;
+            color: #f5c542;
+            box-shadow: 0 0 20px rgba(245, 197, 66, 0.1);
+        }
+        .bet-switcher .bet-btn:active {
+            transform: scale(0.95);
         }
 
         /* ===== Game Info Bar (Timer & Players) ===== */
@@ -1132,6 +1203,13 @@
             .game-info-bar .info-item .value.timer {
                 font-size: 0.85rem;
             }
+            .bet-switcher {
+                padding: 2px 8px;
+            }
+            .bet-switcher .bet-btn {
+                font-size: 0.65rem;
+                padding: 1px 10px;
+            }
         }
         @media (max-width:380px) {
             .game-wrapper {
@@ -1203,17 +1281,23 @@
             .game-info-bar .info-item .value.timer {
                 font-size: 0.8rem;
             }
+            .bet-switcher {
+                padding: 2px 6px;
+            }
+            .bet-switcher .bet-btn {
+                font-size: 0.6rem;
+                padding: 1px 8px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="game-wrapper">
-        <!-- ===== AUTH SCREEN (First Time Login) ===== -->
+        <!-- ===== AUTH SCREEN ===== -->
         <div id="authScreen" class="auth-screen">
             <div class="logo"><h2>🎯 <span>BINGO</span></h2></div>
             <div class="subtitle">Bet 10 or 20 Birr</div>
             <div id="authError" class="auth-error"></div>
-            <div class="telegram-info" id="telegramInfo">📱 Enter your username and password</div>
             <input type="text" id="authUsername" placeholder="Username" maxlength="20" autocomplete="username">
             <input type="password" id="authPassword" placeholder="Password" minlength="4" autocomplete="current-password">
             <button class="auth-btn" id="authLoginBtn">Login</button>
@@ -1223,7 +1307,7 @@
             </div>
         </div>
 
-        <!-- ===== WELCOME SCREEN (Bet Selection) ===== -->
+        <!-- ===== WELCOME SCREEN ===== -->
         <div id="welcomeScreen" class="welcome-screen">
             <div class="logo">
                 <h2>🎯 <span>BINGO</span></h2>
@@ -1243,8 +1327,8 @@
                 Play balance: <span class="amount" id="welcomeBalance">0</span> Birr
             </div>
             <div style="display:flex;gap:8px;margin-top:4px;">
-                <button class="logout-btn" id="welcomeLogoutBtn" style="background:rgba(40,80,120,0.3);border:1px solid rgba(60,120,170,0.15);border-radius:30px;padding:8px 20px;color:#8ab0c8;font-size:0.75rem;cursor:pointer;transition:all 0.2s;">🚪 Logout</button>
-                <button class="logout-btn" id="welcomeDepositBtn" style="background:rgba(40,80,120,0.3);border:1px solid rgba(125,223,160,0.3);border-radius:30px;padding:8px 20px;color:#7ddfa0;font-size:0.75rem;cursor:pointer;transition:all 0.2s;">💰 Deposit</button>
+                <button class="logout-btn" id="welcomeLogoutBtn">🚪 Logout</button>
+                <button class="logout-btn" id="welcomeDepositBtn" style="border-color:rgba(125,223,160,0.3);color:#7ddfa0;">💰 Deposit</button>
             </div>
         </div>
 
@@ -1275,6 +1359,13 @@
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Bet Switcher -->
+            <div class="bet-switcher">
+                <span class="label">🎯 Bet:</span>
+                <button class="bet-btn active" id="switchBet10">10 Birr</button>
+                <button class="bet-btn" id="switchBet20">20 Birr</button>
             </div>
 
             <!-- Game Info Bar (Timer & Players) -->
@@ -1406,6 +1497,24 @@
         function playNoWinnerAudio() { playAudio(NO_WINNER_AUDIO); }
 
         // ============================================================
+        //  TELEGRAM WEBAPP INIT
+        // ============================================================
+        let tg = null;
+        let isTelegram = false;
+
+        try {
+            tg = window.Telegram?.WebApp;
+            if (tg) {
+                tg.ready();
+                tg.expand();
+                isTelegram = true;
+                console.log('✅ Telegram WebApp initialized');
+            }
+        } catch (e) {
+            console.log('Not running in Telegram');
+        }
+
+        // ============================================================
         //  FIREBASE CONFIG
         // ============================================================
         const firebaseConfig = {
@@ -1501,13 +1610,15 @@
         const authLoginBtn = $('authLoginBtn');
         const authSignupBtn = $('authSignupBtn');
         const authStatus = $('authStatus');
-        const telegramInfo = $('telegramInfo');
 
         const bet10Btn = $('bet10Btn');
         const bet20Btn = $('bet20Btn');
         const welcomeBalance = $('welcomeBalance');
         const welcomeLogoutBtn = $('welcomeLogoutBtn');
         const welcomeDepositBtn = $('welcomeDepositBtn');
+
+        const switchBet10 = $('switchBet10');
+        const switchBet20 = $('switchBet20');
 
         const walletUsername = $('walletUsername');
         const mainWalletEl = $('mainWallet');
@@ -1566,7 +1677,7 @@
         }
 
         // ============================================================
-        //  AUTH 
+        //  AUTH
         // ============================================================
         function loadUsers() { users = DB.getUsers(); }
 
@@ -1577,7 +1688,6 @@
             welcomeScreen.style.display = 'none';
             gameScreen.style.display = 'none';
             authError.textContent = '';
-            telegramInfo.textContent = '📱 Enter your username and password';
             setConnectionStatus(firebaseAvailable, firebaseAvailable ? '🌐 Connected' : '📡 Offline');
             DB.setSavedBet(null);
         }
@@ -1606,12 +1716,26 @@
             modeLabel.textContent = currentBet + ' Birr';
             gameRoomBadge.textContent = '💰 Bet: ' + currentBet + ' Birr';
             betDisplay.textContent = currentBet;
+            updateBetSwitcher();
             updateWalletUI();
             updatePickStatus();
             audioPlayedThisRound = false;
             DB.setSavedBet(currentBet);
         }
 
+        function updateBetSwitcher() {
+            if (currentBet === 10) {
+                switchBet10.classList.add('active');
+                switchBet20.classList.remove('active');
+            } else {
+                switchBet20.classList.add('active');
+                switchBet10.classList.remove('active');
+            }
+        }
+
+        // ============================================================
+        //  LOGIN
+        // ============================================================
         function handleLogin() {
             const username = authUsername.value.trim();
             const password = authPassword.value.trim();
@@ -1664,6 +1788,39 @@
             audioPlayedThisRound = false;
             showAuthScreen();
             closeMoreDropdown();
+        }
+
+        // ============================================================
+        //  BET SWITCHER
+        // ============================================================
+        function switchBet(amount) {
+            if (!currentUser) return;
+            if (amount === currentBet) return;
+
+            const wallet = getWallet(currentUser);
+            if (wallet.play < amount) {
+                alert(`⚠️ Insufficient play balance (${wallet.play}/${amount}). Deposit to play.`);
+                return;
+            }
+
+            // Leave current room
+            if (gameRef) {
+                gameRef.child('players/' + currentUser).remove();
+                gameRef.off();
+                gameRef = null;
+            }
+            stopTimer();
+            stopResultsCountdown();
+            isGameInitialized = false;
+
+            currentBet = amount;
+            currentRoom = amount === 10 ? 'room_10' : 'room_20';
+            DB.setSavedBet(amount);
+
+            // Re-join new room
+            showGameScreen();
+            initGameConnection();
+            updateStatus(`🔄 Switched to ${amount} Birr room`);
         }
 
         // ============================================================
@@ -1846,7 +2003,6 @@
             engineState.activePlayersCount = playerNames.length;
             engineState.gameStarted = data.gameStarted || true;
 
-            // Rebuild taken numbers from ALL players' picks
             const allTaken = new Set();
             playerNames.forEach(name => {
                 const pick = players[name]?.pick;
@@ -1862,12 +2018,10 @@
 
             updateUIFromState();
 
-            // Timer handling
             if (engineState.gamePhase === 'selection' && !isTimerRunning) {
                 startTimer();
             }
 
-            // Timer hit zero – spin if at least 1 player
             if (engineState.gamePhase === 'selection' && engineState.timer <= 0 && engineState.activePlayersCount >= 1) {
                 stopTimer();
                 if (!audioPlayedThisRound) {
@@ -1884,20 +2038,18 @@
                 }, 1000);
             }
 
-            // If no players, reset timer
             if (engineState.gamePhase === 'selection' && engineState.timer <= 0 && engineState.activePlayersCount === 0) {
                 gameRef.update({ timer: 30 });
                 if (!isTimerRunning) startTimer();
             }
 
-            // Results countdown
             if (engineState.gamePhase === 'results' && !isResultsCountdownRunning) {
                 startResultsCountdown();
             }
         }
 
         // ============================================================
-        //  TIMER (Selection phase)
+        //  TIMER
         // ============================================================
         function startTimer() {
             if (timerInterval) {
@@ -1962,7 +2114,7 @@
         }
 
         // ============================================================
-        //  RESULTS COUNTDOWN (5,4,3,2,1,0 then reset)
+        //  RESULTS COUNTDOWN
         // ============================================================
         function startResultsCountdown() {
             if (isResultsCountdownRunning) return;
@@ -2037,7 +2189,6 @@
                 const phaseLabels = { 'selection': '⏳ Selecting', 'spinning': '🎡 Spinning', 'results': '🏆 Results' };
                 gamePhaseLabel.textContent = phaseLabels[engineState.gamePhase] || '⏳';
 
-                // Show/hide wheel
                 if (engineState.gamePhase === 'spinning' || engineState.gamePhase === 'results') {
                     wheelContainer.classList.remove('hidden');
                     spinResults.classList.remove('hidden');
@@ -2082,7 +2233,7 @@
         }
 
         // ============================================================
-        //  PICK STATUS – Shows taken numbers in real-time
+        //  PICK STATUS
         // ============================================================
         function updatePickStatus() {
             const myPick = (engineState.players[currentUser] && engineState.players[currentUser].pick) || null;
@@ -2107,7 +2258,7 @@
         }
 
         // ============================================================
-        //  NUMBER PICKER – Shows taken numbers as disabled
+        //  NUMBER PICKER
         // ============================================================
         function renderNumberPicker() {
             if (!currentUser) return;
@@ -2161,6 +2312,9 @@
 
             if (engineState.allTakenNumbers.has(num)) {
                 updateStatus(`❌ Number ${num} is already taken!`);
+                if (tg && tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
                 return;
             }
 
@@ -2199,6 +2353,12 @@
             if (gameRef) {
                 gameRef.child('players/' + currentUser + '/pick').set(newPick);
                 gameRef.child('players/' + currentUser + '/ready').set(isReady);
+            }
+
+            if (tg && tg.HapticFeedback) {
+                if (newPick !== null) {
+                    tg.HapticFeedback.impactOccurred('light');
+                }
             }
 
             renderNumberPicker();
@@ -2362,6 +2522,12 @@
             }
             winnersModal.classList.add('active');
 
+            if (tg && tg.HapticFeedback) {
+                if (winners.includes(currentUser)) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+            }
+
             setTimeout(() => {
                 if (!isResultsCountdownRunning && engineState.gamePhase === 'results') {
                     startResultsCountdown();
@@ -2392,6 +2558,10 @@
                 depositModal.classList.add('active');
             };
 
+            // Bet switcher buttons
+            switchBet10.onclick = () => { switchBet(10); };
+            switchBet20.onclick = () => { switchBet(20); };
+
             moreBtn.onclick = toggleMoreDropdown;
 
             depositBtn.onclick = () => {
@@ -2420,7 +2590,11 @@
                 stopResultsCountdown();
                 isGameInitialized = false;
                 audioPlayedThisRound = false;
-                showWelcomeScreen();
+                if (tg) {
+                    tg.close();
+                } else {
+                    window.close();
+                }
                 closeMoreDropdown();
             };
 
@@ -2429,10 +2603,29 @@
             withdrawConfirm.onclick = () => { withdrawFromMain(parseInt(withdrawAmount.value)); };
             withdrawCancel.onclick = () => { withdrawModal.classList.remove('active'); };
 
+            if (tg && tg.BackButton) {
+                tg.BackButton.onClick(() => {
+                    if (gameScreen.style.display !== 'none') {
+                        if (gameRef) {
+                            gameRef.child('players/' + currentUser).remove();
+                            gameRef.off();
+                            gameRef = null;
+                        }
+                        stopTimer();
+                        stopResultsCountdown();
+                        isGameInitialized = false;
+                        audioPlayedThisRound = false;
+                        showWelcomeScreen();
+                    } else {
+                        showWelcomeScreen();
+                    }
+                });
+                tg.BackButton.show();
+            }
+
             const savedUser = DB.getCurrentUser();
             loadUsers();
 
-            // If user is saved, auto-login
             if (savedUser && users[savedUser]) {
                 currentUser = savedUser;
                 showWelcomeScreen();
