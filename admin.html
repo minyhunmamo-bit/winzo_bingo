@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Admin · Bingo Server</title>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js">
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #0b1a2a;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+            color: #d4e6fa;
+        }
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 2px solid rgba(60, 120, 170, 0.2);
+            margin-bottom: 20px;
+        }
+        .admin-header h1 {
+            color: #f5e7c8;
+            font-size: 1.8rem;
+            letter-spacing: 2px;
+        }
+        .admin-header h1 span {
+            color: #f5c542;
+        }
+        .admin-header .status {
+            color: #7ddfa0;
+            font-size: 0.9rem;
+        }
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .admin-card {
+            background: rgba(20, 45, 70, 0.6);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid rgba(60, 120, 170, 0.15);
+        }
+        .admin-card h2 {
+            color: #f5e7c8;
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(60, 120, 170, 0.15);
+        }
+        .admin-card .count {
+            color: #8ab0c8;
+            font-size: 0.8rem;
+            font-weight: 400;
+        }
+
+        /* Transaction List */
+        .transaction-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .transaction-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .transaction-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+        .transaction-list::-webkit-scrollbar-thumb {
+            background: rgba(80, 150, 200, 0.3);
+            border-radius: 10px;
+        }
+        .tx-item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            border-left: 4px solid #f5d76e;
+            transition: all 0.3s;
+        }
+        .tx-item.approved {
+            border-left-color: #7ddfa0;
+            opacity: 0.7;
+        }
+        .tx-item.rejected {
+            border-left-color: #ff6b6b;
+            opacity: 0.7;
+        }
+        .tx-item .tx-info {
+            flex: 1;
+            min-width: 150px;
+        }
+        .tx-item .tx-info .user {
+            font-weight: 700;
+            color: #f5e7c8;
+        }
+        .tx-item .tx-info .details {
+            font-size: 0.75rem;
+            color: #8ab0c8;
+        }
+        .tx-item .tx-amount {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: #f5c542;
+        }
+        .tx-item .tx-actions {
+            display: flex;
+            gap: 6px;
+        }
+        .tx-item .tx-actions button {
+            padding: 4px 14px;
+            border-radius: 20px;
+            border: none;
+            font-weight: 700;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tx-item .tx-actions .approve {
+            background: #2a8a4a;
+            color: #f0fff0;
+        }
+        .tx-item .tx-actions .approve:hover {
+            background: #3aaa5a;
+        }
+        .tx-item .tx-actions .reject {
+            background: #8a2a2a;
+            color: #fff0f0;
+        }
+        .tx-item .tx-actions .reject:hover {
+            background: #aa3a3a;
+        }
+        .tx-item .tx-actions button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .tx-item .tx-status {
+            font-size: 0.7rem;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .tx-item .tx-status.pending {
+            background: rgba(200, 180, 60, 0.2);
+            color: #f5d76e;
+        }
+        .tx-item .tx-status.approved {
+            background: rgba(70, 200, 120, 0.2);
+            color: #7ddfa0;
+        }
+        .tx-item .tx-status.rejected {
+            background: rgba(200, 70, 70, 0.2);
+            color: #ff8a8a;
+        }
+
+        /* Player List */
+        .player-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .player-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .player-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+        .player-list::-webkit-scrollbar-thumb {
+            background: rgba(80, 150, 200, 0.3);
+            border-radius: 10px;
+        }
+        .player-item {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .player-item .p-name {
+            font-weight: 700;
+            color: #f5e7c8;
+        }
+        .player-item .p-wallets {
+            display: flex;
+            gap: 12px;
+            font-size: 0.8rem;
+        }
+        .player-item .p-wallets span {
+            color: #8ab0c8;
+        }
+        .player-item .p-wallets .main {
+            color: #f5c542;
+        }
+        .player-item .p-wallets .play {
+            color: #7ddfa0;
+        }
+
+        .empty-state {
+            color: #4a6a8a;
+            text-align: center;
+            padding: 30px 0;
+            font-size: 0.9rem;
+        }
+
+        /* Refresh button */
+        .refresh-btn {
+            background: rgba(40, 80, 120, 0.3);
+            border: 1px solid rgba(60, 120, 170, 0.2);
+            border-radius: 30px;
+            padding: 6px 16px;
+            color: #8ab0c8;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        .refresh-btn:hover {
+            background: rgba(40, 80, 120, 0.5);
+        }
+        .refresh-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>🎯 <span>BINGO</span> · Admin</h1>
+            <div>
+                <span class="status" id="adminStatus">🟢 Online</span>
+                <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+            </div>
+        </div>
+
+        <div class="admin-grid">
+            <!-- Transactions -->
+            <div class="admin-card">
+                <h2>📋 Transactions <span class="count" id="txCount">(0)</span></h2>
+                <div class="transaction-list" id="transactionList">
+                    <div class="empty-state">No pending transactions</div>
+                </div>
+            </div>
+
+            <!-- Players -->
+            <div class="admin-card">
+                <h2>👥 Players <span class="count" id="playerCount">(0)</span></h2>
+                <div class="player-list" id="playerList">
+                    <div class="empty-state">No players registered</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        //  FIREBASE CONFIG – SAME AS MAIN GAME
+        // ============================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyDtrK2x0gwnnIXu0m0EseEHkVHqsP1nPCI",
+            authDomain: "my-bingo-game-83df1.firebaseapp.com",
+            databaseURL: "https://my-bingo-game-83df1-default-rtdb.firebaseio.com",
+            projectId: "my-bingo-game-83df1",
+            storageBucket: "my-bingo-game-83df1.firebasestorage.app",
+            messagingSenderId: "750488641763",
+            appId: "1:750488641763:web:494503b5f3f99daedc25d6"
+        };
+
+        let database = null;
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            console.log('✅ Firebase connected');
+            document.getElementById('adminStatus').textContent = '🟢 Online';
+        } catch (e) {
+            console.warn('⚠️ Firebase error:', e);
+            document.getElementById('adminStatus').textContent = '🔴 Offline';
+        }
+
+        // ============================================================
+        //  LOAD DATA
+        // ============================================================
+        function loadTransactions() {
+            if (!database) return;
+
+            const txRef = database.ref('transactions');
+            txRef.orderByChild('timestamp').limitToLast(50).on('value', snapshot => {
+                const data = snapshot.val();
+                const list = document.getElementById('transactionList');
+                const count = document.getElementById('txCount');
+
+                if (!data) {
+                    list.innerHTML = '<div class="empty-state">No transactions</div>';
+                    count.textContent = '(0)';
+                    return;
+                }
+
+                const entries = Object.values(data).reverse();
+                count.textContent = `(${entries.length})`;
+
+                let html = '';
+                entries.forEach(tx => {
+                    const statusClass = tx.status || 'pending';
+                    const statusLabel = statusClass.charAt(0).toUpperCase() + statusClass.slice(1);
+                    const isPending = statusClass === 'pending';
+
+                    html += `
+                        <div class="tx-item ${statusClass}">
+                            <div class="tx-info">
+                                <div class="user">${tx.username || 'Unknown'}</div>
+                                <div class="details">${tx.type || 'Transaction'} · ${new Date(tx.timestamp).toLocaleTimeString()}</div>
+                            </div>
+                            <div class="tx-amount">${tx.amount || 0} Birr</div>
+                            <span class="tx-status ${statusClass}">${statusLabel}</span>
+                            <div class="tx-actions">
+                                <button class="approve" ${!isPending ? 'disabled' : ''} data-txid="${tx.id}" onclick="approveTransaction('${tx.id}')">✅ Approve</button>
+                                <button class="reject" ${!isPending ? 'disabled' : ''} data-txid="${tx.id}" onclick="rejectTransaction('${tx.id}')">❌ Reject</button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                list.innerHTML = html || '<div class="empty-state">No transactions</div>';
+            });
+        }
+
+        function loadPlayers() {
+            if (!database) return;
+
+            const usersRef = database.ref('users');
+            usersRef.on('value', snapshot => {
+                const data = snapshot.val();
+                const list = document.getElementById('playerList');
+                const count = document.getElementById('playerCount');
+
+                if (!data) {
+                    list.innerHTML = '<div class="empty-state">No players registered</div>';
+                    count.textContent = '(0)';
+                    return;
+                }
+
+                const entries = Object.entries(data);
+                count.textContent = `(${entries.length})`;
+
+                let html = '';
+                entries.forEach(([username, userData]) => {
+                    const main = userData.mainWallet || 0;
+                    const play = userData.playWallet || 0;
+                    html += `
+                        <div class="player-item">
+                            <span class="p-name">${username}</span>
+                            <div class="p-wallets">
+                                <span class="main">💰 ${main}</span>
+                                <span class="play">🎰 ${play}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                list.innerHTML = html || '<div class="empty-state">No players</div>';
+            });
+        }
+
+        // ============================================================
+        //  TRANSACTION ACTIONS
+        // ============================================================
+        function approveTransaction(txId) {
+            if (!database) return;
+            const txRef = database.ref('transactions/' + txId);
+            txRef.once('value', snapshot => {
+                const data = snapshot.val();
+                if (!data || data.status !== 'pending') return;
+
+                const username = data.username;
+                const amount = parseInt(data.amount);
+                const type = data.type;
+
+                // Update user wallet
+                const userRef = database.ref('users/' + username);
+                userRef.once('value', userSnapshot => {
+                    const userData = userSnapshot.val() || { mainWallet: 0, playWallet: 0 };
+
+                    if (type === 'deposit') {
+                        userData.playWallet = (userData.playWallet || 0) + amount;
+                    } else if (type === 'withdraw') {
+                        userData.mainWallet = Math.max(0, (userData.mainWallet || 0) - amount);
+                    }
+
+                    userRef.set(userData);
+
+                    // Mark transaction as approved
+                    txRef.update({ status: 'approved' });
+
+                    // Also update the local users list in the main game via Firebase
+                    // (The main game listens to users changes via the 'users' node)
+                });
+            });
+        }
+
+        function rejectTransaction(txId) {
+            if (!database) return;
+            const txRef = database.ref('transactions/' + txId);
+            txRef.update({ status: 'rejected' });
+        }
+
+        // ============================================================
+        //  REFRESH
+        // ============================================================
+        document.getElementById('refreshBtn').onclick = () => {
+            if (database) {
+                // Force reload by re-attaching listeners
+                database.ref('transactions').off();
+                database.ref('users').off();
+                loadTransactions();
+                loadPlayers();
+                document.getElementById('adminStatus').textContent = '🔄 Refreshing...';
+                setTimeout(() => {
+                    document.getElementById('adminStatus').textContent = '🟢 Online';
+                }, 500);
+            }
+        };
+
+        // ============================================================
+        //  INIT
+        // ============================================================
+        if (database) {
+            loadTransactions();
+            loadPlayers();
+        } else {
+            document.getElementById('adminStatus').textContent = '🔴 Offline - Check Firebase config';
+        }
+
+        console.log('✅ Admin server started');
+    </script>
+</body>
+</html>
