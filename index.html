@@ -82,6 +82,23 @@
             font-size: 0.8rem;
             letter-spacing: 1px;
         }
+        .auth-screen .telegram-info {
+            color: #7ddfa0;
+            text-align: center;
+            font-size: 0.8rem;
+            background: rgba(70, 200, 120, 0.1);
+            padding: 8px;
+            border-radius: 30px;
+            border: 1px solid rgba(70, 200, 120, 0.2);
+        }
+        .auth-screen .telegram-info.detected {
+            border-color: rgba(70, 200, 120, 0.4);
+            color: #7ddfa0;
+        }
+        .auth-screen .telegram-info.not-detected {
+            border-color: rgba(200, 180, 60, 0.2);
+            color: #f5d76e;
+        }
         .auth-screen input {
             background: #0a1a2a;
             border: 2px solid rgba(60, 120, 170, 0.4);
@@ -243,7 +260,7 @@
             color: #ff8a8a;
         }
 
-        /* ===== Top Bar (Wallet & Game Info) ===== */
+        /* ===== Top Bar ===== */
         .wallet-bar {
             display: flex;
             flex-wrap: wrap;
@@ -519,7 +536,7 @@
             transform: scale(0.95);
         }
 
-        /* ===== Game Info Bar (Timer & Players) ===== */
+        /* ===== Game Info Bar ===== */
         .game-info-bar {
             display: flex;
             justify-content: center;
@@ -1126,6 +1143,72 @@
             box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
         }
 
+        /* ===== Transaction Status Modal ===== */
+        .transaction-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(16px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+        .transaction-modal.active {
+            display: flex;
+        }
+        .transaction-modal .modal-content {
+            max-width: 380px;
+            width: 100%;
+            padding: 24px 20px 20px;
+            border-radius: 28px;
+            background: linear-gradient(160deg, #1e3a55, #13273a);
+            border: 1px solid rgba(245, 197, 66, 0.2);
+        }
+        .transaction-modal .modal-content h3 {
+            color: #f5e7c8;
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+            border-bottom: 2px solid rgba(60, 120, 170, 0.2);
+            padding-bottom: 8px;
+        }
+        .transaction-modal .modal-content .status-text {
+            color: #8ab0c8;
+            text-align: center;
+            font-size: 0.9rem;
+            padding: 8px 0;
+        }
+        .transaction-modal .modal-content .status-text.pending {
+            color: #f5d76e;
+        }
+        .transaction-modal .modal-content .status-text.approved {
+            color: #7ddfa0;
+        }
+        .transaction-modal .modal-content .status-text.rejected {
+            color: #ff6b6b;
+        }
+        .transaction-modal .modal-content .close-btn {
+            width: 100%;
+            padding: 10px;
+            border-radius: 30px;
+            border: none;
+            background: rgba(40, 80, 120, 0.5);
+            color: #d4e6fa;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
+        .transaction-modal .modal-content .close-btn:hover {
+            background: rgba(40, 80, 120, 0.7);
+        }
+
         /* ===== Responsive ===== */
         @media (max-height:700px) {
             .game-wrapper {
@@ -1298,6 +1381,7 @@
             <div class="logo"><h2>🎯 <span>BINGO</span></h2></div>
             <div class="subtitle">Bet 10 or 20 Birr</div>
             <div id="authError" class="auth-error"></div>
+            <div class="telegram-info" id="telegramInfo">📱 Detecting Telegram user...</div>
             <input type="text" id="authUsername" placeholder="Username" maxlength="20" autocomplete="username">
             <input type="password" id="authPassword" placeholder="Password" minlength="4" autocomplete="current-password">
             <button class="auth-btn" id="authLoginBtn">Login</button>
@@ -1368,7 +1452,7 @@
                 <button class="bet-btn" id="switchBet20">20 Birr</button>
             </div>
 
-            <!-- Game Info Bar (Timer & Players) -->
+            <!-- Game Info Bar -->
             <div class="game-info-bar">
                 <div class="info-item">
                     ⏱️ <span class="value timer" id="timerDisplay">30</span>s
@@ -1386,7 +1470,7 @@
                 <span>🎯 Pick <span class="highlight">one</span> number</span>
             </div>
 
-            <!-- Wheel & Results -->
+            <!-- Wheel -->
             <div class="wheel-container hidden" id="wheelContainer">
                 <div class="wheel" id="wheel">
                     <div class="wheel-numbers" id="wheelNumbers"></div>
@@ -1467,6 +1551,15 @@
         </div>
     </div>
 
+    <!-- Transaction Status Modal -->
+    <div class="transaction-modal" id="transactionModal">
+        <div class="modal-content">
+            <h3>💳 Transaction Request</h3>
+            <div class="status-text pending" id="transactionStatus">⏳ Pending admin approval...</div>
+            <button class="close-btn" id="transactionCloseBtn">OK</button>
+        </div>
+    </div>
+
     <!-- ============================================================ -->
     <!-- JAVASCRIPT -->
     <!-- ============================================================ -->
@@ -1480,7 +1573,6 @@
 
         function playAudio(audioData) {
             if (!audioData || audioData.includes('YOUR_')) {
-                console.log('Audio data not configured – skipping');
                 return;
             }
             try {
@@ -1497,21 +1589,74 @@
         function playNoWinnerAudio() { playAudio(NO_WINNER_AUDIO); }
 
         // ============================================================
-        //  TELEGRAM WEBAPP INIT
+        //  TELEGRAM WEBAPP INIT – IMPROVED DETECTION
         // ============================================================
         let tg = null;
+        let telegramUser = null;
         let isTelegram = false;
+        let telegramDetectionAttempts = 0;
+        let maxTelegramAttempts = 5;
 
-        try {
-            tg = window.Telegram?.WebApp;
-            if (tg) {
-                tg.ready();
-                tg.expand();
-                isTelegram = true;
-                console.log('✅ Telegram WebApp initialized');
+        function detectTelegramUser() {
+            try {
+                tg = window.Telegram?.WebApp;
+                if (tg) {
+                    tg.ready();
+                    tg.expand();
+                    isTelegram = true;
+
+                    // Try multiple ways to get user data
+                    let user = null;
+                    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                        user = tg.initDataUnsafe.user;
+                    } else if (tg.initData && tg.initData.user) {
+                        try {
+                            const parsed = JSON.parse(decodeURIComponent(tg.initData));
+                            if (parsed.user) user = parsed.user;
+                        } catch (e) {}
+                    }
+
+                    if (user) {
+                        telegramUser = user;
+                        const name = user.username || user.first_name || '';
+                        const infoEl = document.getElementById('telegramInfo');
+                        if (infoEl) {
+                            if (name) {
+                                infoEl.textContent = '✅ Detected Telegram: @' + name;
+                                infoEl.className = 'telegram-info detected';
+                                document.getElementById('authUsername').value = name;
+                            } else {
+                                infoEl.textContent = '📱 Telegram detected (no username). Enter manually.';
+                                infoEl.className = 'telegram-info not-detected';
+                            }
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            } catch (e) {
+                console.warn('Telegram detection error:', e);
+                return false;
             }
-        } catch (e) {
-            console.log('Not running in Telegram');
+        }
+
+        // Try to detect Telegram user with retries
+        function attemptTelegramDetection() {
+            if (telegramDetectionAttempts >= maxTelegramAttempts) {
+                const infoEl = document.getElementById('telegramInfo');
+                if (infoEl) {
+                    infoEl.textContent = '📱 Telegram not detected. Enter manually.';
+                    infoEl.className = 'telegram-info not-detected';
+                }
+                return false;
+            }
+
+            telegramDetectionAttempts++;
+            const detected = detectTelegramUser();
+            if (!detected && telegramDetectionAttempts < maxTelegramAttempts) {
+                setTimeout(attemptTelegramDetection, 500);
+            }
+            return detected;
         }
 
         // ============================================================
@@ -1530,6 +1675,7 @@
         let firebaseAvailable = false;
         let database = null;
         let isMultiplayer = false;
+        let transactionListeners = {};
 
         try {
             firebase.initializeApp(firebaseConfig);
@@ -1588,7 +1734,8 @@
             activePlayersCount: 0,
             cumulativeRotation: 0,
             playerNames: [],
-            gameStarted: true
+            gameStarted: true,
+            spinInProgress: false
         };
 
         let timerInterval = null;
@@ -1596,6 +1743,29 @@
         let audioPlayedThisRound = false;
         let resultsCountdownInterval = null;
         let isResultsCountdownRunning = false;
+        let spinTimeout = null;
+
+        // ============================================================
+        //  ERROR HANDLING
+        // ============================================================
+        function handleError(error, context) {
+            console.error(`Error in ${context}:`, error);
+            const msg = error.message || 'An error occurred';
+            updateStatus(`⚠️ ${msg}`);
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.notificationOccurred('error');
+            }
+            return false;
+        }
+
+        function safeExecute(fn, context, fallback) {
+            try {
+                return fn();
+            } catch (e) {
+                handleError(e, context);
+                return fallback;
+            }
+        }
 
         // ============================================================
         //  DOM REFS
@@ -1610,6 +1780,7 @@
         const authLoginBtn = $('authLoginBtn');
         const authSignupBtn = $('authSignupBtn');
         const authStatus = $('authStatus');
+        const telegramInfo = $('telegramInfo');
 
         const bet10Btn = $('bet10Btn');
         const bet20Btn = $('bet20Btn');
@@ -1648,6 +1819,9 @@
         const withdrawCancel = $('withdrawCancel');
         const winnersModal = $('winnersModal');
         const winnersList = $('winnersList');
+        const transactionModal = $('transactionModal');
+        const transactionStatus = $('transactionStatus');
+        const transactionCloseBtn = $('transactionCloseBtn');
 
         const wheelContainer = $('wheelContainer');
         const spinResults = $('spinResults');
@@ -1677,6 +1851,72 @@
         }
 
         // ============================================================
+        //  TRANSACTION SYSTEM (Firebase)
+        // ============================================================
+        function requestTransaction(type, amount) {
+            if (!currentUser) return false;
+
+            return safeExecute(() => {
+                const txRef = database.ref('transactions').push();
+                const txData = {
+                    id: txRef.key,
+                    username: currentUser,
+                    type: type, // 'deposit' or 'withdraw'
+                    amount: parseInt(amount),
+                    status: 'pending',
+                    timestamp: Date.now(),
+                    playerMainWallet: users[currentUser].mainWallet || 0,
+                    playerPlayWallet: users[currentUser].playWallet || 0
+                };
+
+                txRef.set(txData);
+
+                // Show pending modal
+                transactionStatus.textContent = '⏳ Pending admin approval...';
+                transactionStatus.className = 'status-text pending';
+                transactionModal.classList.add('active');
+
+                // Listen for status changes
+                const listener = txRef.on('value', snapshot => {
+                    const data = snapshot.val();
+                    if (!data) return;
+
+                    if (data.status === 'approved') {
+                        transactionStatus.textContent = '✅ Approved! Transaction completed.';
+                        transactionStatus.className = 'status-text approved';
+
+                        // Update wallet
+                        loadUsers();
+                        if (type === 'deposit') {
+                            users[currentUser].playWallet = (users[currentUser].playWallet || 0) + parseInt(data.amount);
+                        } else {
+                            users[currentUser].mainWallet = (users[currentUser].mainWallet || 0) - parseInt(data.amount);
+                        }
+                        saveUsers();
+                        updateWalletUI();
+                        updateWelcomeUI();
+
+                        // Remove listener
+                        txRef.off();
+                        delete transactionListeners[txRef.key];
+
+                        if (tg && tg.HapticFeedback) {
+                            tg.HapticFeedback.notificationOccurred('success');
+                        }
+                    } else if (data.status === 'rejected') {
+                        transactionStatus.textContent = '❌ Rejected by admin.';
+                        transactionStatus.className = 'status-text rejected';
+                        txRef.off();
+                        delete transactionListeners[txRef.key];
+                    }
+                });
+
+                transactionListeners[txRef.key] = listener;
+                return true;
+            }, 'Transaction request', false);
+        }
+
+        // ============================================================
         //  AUTH
         // ============================================================
         function loadUsers() { users = DB.getUsers(); }
@@ -1690,6 +1930,7 @@
             authError.textContent = '';
             setConnectionStatus(firebaseAvailable, firebaseAvailable ? '🌐 Connected' : '📡 Offline');
             DB.setSavedBet(null);
+            attemptTelegramDetection();
         }
 
         function showWelcomeScreen() {
@@ -1777,8 +2018,15 @@
                 gameRef.off();
                 gameRef = null;
             }
+            // Clean up transaction listeners
+            Object.keys(transactionListeners).forEach(key => {
+                const ref = database.ref('transactions/' + key);
+                ref.off();
+                delete transactionListeners[key];
+            });
             stopTimer();
             stopResultsCountdown();
+            if (spinTimeout) clearTimeout(spinTimeout);
             currentUser = null;
             DB.setCurrentUser(null);
             DB.setSavedBet(null);
@@ -1803,7 +2051,6 @@
                 return;
             }
 
-            // Leave current room
             if (gameRef) {
                 gameRef.child('players/' + currentUser).remove();
                 gameRef.off();
@@ -1811,13 +2058,13 @@
             }
             stopTimer();
             stopResultsCountdown();
+            if (spinTimeout) clearTimeout(spinTimeout);
             isGameInitialized = false;
 
             currentBet = amount;
             currentRoom = amount === 10 ? 'room_10' : 'room_20';
             DB.setSavedBet(amount);
 
-            // Re-join new room
             showGameScreen();
             initGameConnection();
             updateStatus(`🔄 Switched to ${amount} Birr room`);
@@ -1879,31 +2126,19 @@
         function depositToPlay(amount) {
             if (!currentUser) return false;
             if (amount <= 0) { depositError.textContent = 'Enter a valid amount.'; return false; }
-            loadUsers();
-            users[currentUser].playWallet = (users[currentUser].playWallet || 0) + amount;
-            saveUsers();
-            updateWalletUI();
-            updateWelcomeUI();
             depositError.textContent = '';
             depositModal.classList.remove('active');
-            closeMoreDropdown();
-            return true;
+            return requestTransaction('deposit', amount);
         }
 
         function withdrawFromMain(amount) {
             if (!currentUser) return false;
             if (amount <= 0) { withdrawError.textContent = 'Enter a valid amount.'; return false; }
-            loadUsers();
-            const main = users[currentUser].mainWallet || 0;
-            if (main < amount) { withdrawError.textContent = 'Insufficient main balance.'; return false; }
-            users[currentUser].mainWallet = main - amount;
-            saveUsers();
-            updateWalletUI();
-            updateWelcomeUI();
+            const wallet = getWallet(currentUser);
+            if (wallet.main < amount) { withdrawError.textContent = 'Insufficient main balance.'; return false; }
             withdrawError.textContent = '';
             withdrawModal.classList.remove('active');
-            closeMoreDropdown();
-            return true;
+            return requestTransaction('withdraw', amount);
         }
 
         function deductBetFromPlay(betAmount) {
@@ -1985,7 +2220,7 @@
         }
 
         // ============================================================
-        //  SYNC GAME STATE
+        //  SYNC GAME STATE – WITH FIXED SPINNING
         // ============================================================
         function syncGameState(data) {
             const players = data.players || {};
@@ -2077,7 +2312,7 @@
                     return current - 1;
                 }, (error, committed, snapshot) => {
                     if (error) {
-                        console.warn('Timer error:', error);
+                        handleError(error, 'Timer transaction');
                         return;
                     }
                     if (committed && snapshot) {
@@ -2371,7 +2606,7 @@
         });
 
         // ============================================================
-        //  WHEEL
+        //  WHEEL – FIXED SPINNING
         // ============================================================
         function updateWheel() {
             const numbers = Array.from(engineState.allTakenNumbers);
@@ -2417,127 +2652,181 @@
         }
 
         // ============================================================
-        //  SPIN EXECUTION
+        //  SPIN EXECUTION – FIXED: No freezing
         // ============================================================
         function executeSpin() {
-            if (engineState.gamePhase !== 'spinning') return;
-            if (engineState.isSpinning) return;
-
-            engineState.isSpinning = true;
-            spinningIndicator.classList.add('active');
-
-            const numbers = Array.from(engineState.allTakenNumbers);
-            if (numbers.length === 0) {
-                updateStatus('❌ No numbers chosen!');
-                gameRef.update({ gameState: 'results', timer: 5 });
-                engineState.isSpinning = false;
-                spinningIndicator.classList.remove('active');
+            // Prevent multiple spins
+            if (engineState.isSpinning) {
+                console.log('Spin already in progress');
+                return;
+            }
+            if (engineState.gamePhase !== 'spinning') {
+                console.log('Not in spinning phase');
                 return;
             }
 
-            const winningNumber = numbers[Math.floor(Math.random() * numbers.length)];
-            const targetAngle = getAngleForNumber(winningNumber);
-            const fullRotations = 4;
-            let newRotation = engineState.cumulativeRotation + 360 * fullRotations;
-            const currentAngle = newRotation % 360;
-            let adjustment = (targetAngle - currentAngle + 360) % 360;
-            if (adjustment < 10) adjustment += 360;
-            newRotation += adjustment;
+            engineState.isSpinning = true;
+            engineState.spinInProgress = true;
+            spinningIndicator.classList.add('active');
 
-            engineState.cumulativeRotation = newRotation;
-            engineState.drawnNumbers.push(winningNumber);
-            engineState.spinCount++;
+            try {
+                const numbers = Array.from(engineState.allTakenNumbers);
+                if (numbers.length === 0) {
+                    updateStatus('❌ No numbers chosen!');
+                    gameRef.update({ gameState: 'results', timer: 5 });
+                    engineState.isSpinning = false;
+                    engineState.spinInProgress = false;
+                    spinningIndicator.classList.remove('active');
+                    return;
+                }
 
-            gameRef.update({
-                drawnNumbers: engineState.drawnNumbers,
-                spinCount: engineState.spinCount,
-                cumulativeRotation: newRotation,
-                timer: 5
-            });
+                const winningNumber = numbers[Math.floor(Math.random() * numbers.length)];
+                const targetAngle = getAngleForNumber(winningNumber);
+                const fullRotations = 4 + Math.floor(Math.random() * 2); // 4-5 rotations
+                const extraDegrees = 360 * fullRotations + targetAngle;
 
-            arrowContainer.style.transform = `rotate(${newRotation}deg)`;
-            arrowCenter.textContent = winningNumber;
-            arrowCenter.classList.add('reveal');
-            spinEls[0].textContent = winningNumber;
-            spinEls[0].classList.add('reveal', 'active');
+                // Reset transition and apply rotation
+                arrowContainer.style.transition = 'none';
+                arrowContainer.style.transform = 'rotate(0deg)';
+                
+                // Force reflow
+                void arrowContainer.offsetHeight;
 
-            playWinningAudio();
+                // Apply the spin with smooth transition
+                arrowContainer.style.transition = `transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)`;
+                arrowContainer.style.transform = `rotate(${extraDegrees}deg)`;
 
-            updateStatus(`🎯 Winning number: <span class="highlight">${winningNumber}</span>`);
-            updateWheel();
+                engineState.cumulativeRotation = extraDegrees;
+                engineState.drawnNumbers.push(winningNumber);
+                engineState.spinCount++;
 
-            setTimeout(() => {
-                spinningIndicator.classList.remove('active');
+                // Update Firebase
+                gameRef.update({
+                    drawnNumbers: engineState.drawnNumbers,
+                    spinCount: engineState.spinCount,
+                    cumulativeRotation: extraDegrees,
+                    timer: 5
+                });
+
+                // Update UI elements immediately
+                arrowCenter.textContent = winningNumber;
+                arrowCenter.classList.add('reveal');
+                spinEls[0].textContent = winningNumber;
+                spinEls[0].classList.add('reveal', 'active');
+
+                playWinningAudio();
+                updateStatus(`🎯 Winning number: <span class="highlight">${winningNumber}</span>`);
+                updateWheel();
+
+                // Clear any existing timeout
+                if (spinTimeout) clearTimeout(spinTimeout);
+
+                // Set timeout to complete the spin
+                spinTimeout = setTimeout(() => {
+                    spinningIndicator.classList.remove('active');
+                    engineState.isSpinning = false;
+                    engineState.spinInProgress = false;
+                    spinTimeout = null;
+
+                    // Update game state
+                    gameRef.update({ gameState: 'results' });
+                    
+                    setTimeout(() => {
+                        checkAndAnnounceWinners();
+                    }, 1000);
+                }, 4200);
+
+            } catch (error) {
+                handleError(error, 'Execute Spin');
                 engineState.isSpinning = false;
-                gameRef.update({ gameState: 'results' });
-                setTimeout(() => {
-                    checkAndAnnounceWinners();
-                }, 1000);
-            }, 3500);
+                engineState.spinInProgress = false;
+                spinningIndicator.classList.remove('active');
+                if (spinTimeout) {
+                    clearTimeout(spinTimeout);
+                    spinTimeout = null;
+                }
+            }
         }
 
         // ============================================================
         //  WINNERS
         // ============================================================
         function checkAndAnnounceWinners() {
-            const players = engineState.players;
-            const playerNames = Object.keys(players);
-            const winners = [];
-            const winningNumber = engineState.drawnNumbers[0] || null;
+            try {
+                const players = engineState.players;
+                const playerNames = Object.keys(players);
+                const winners = [];
+                const winningNumber = engineState.drawnNumbers[0] || null;
 
-            playerNames.forEach(name => {
-                const pick = players[name]?.pick;
-                if (pick !== null && pick !== undefined && pick === winningNumber) {
-                    winners.push(name);
-                }
-            });
-
-            gameRef.update({ winners: winners });
-
-            const betAmount = currentBet;
-            const winAmount = betAmount * Math.max(1, playerNames.length);
-
-            winners.forEach(name => {
-                if (name === currentUser) {
-                    creditWinningsToMain(winAmount);
-                    updateStatus(`🎉 You won! +${winAmount} coins (${betAmount} × ${playerNames.length} players)`,
-                        true);
-                }
-            });
-
-            if (winners.length === 0) {
-                winnersList.innerHTML = `<div class="no-winners">😔 No winners this round.</div>`;
-                playNoWinnerAudio();
-            } else {
-                let html = '';
-                winners.forEach(name => {
-                    html += `
-                        <div class="winner-entry">
-                            <span class="player-name">${name}</span>
-                            <span class="winning-nums">🎯 ${winningNumber}</span>
-                        </div>
-                    `;
+                playerNames.forEach(name => {
+                    const pick = players[name]?.pick;
+                    if (pick !== null && pick !== undefined && pick === winningNumber) {
+                        winners.push(name);
+                    }
                 });
-                winnersList.innerHTML = html;
-            }
-            winnersModal.classList.add('active');
 
-            if (tg && tg.HapticFeedback) {
-                if (winners.includes(currentUser)) {
-                    tg.HapticFeedback.notificationOccurred('success');
+                gameRef.update({ winners: winners });
+
+                const betAmount = currentBet;
+                const winAmount = betAmount * Math.max(1, playerNames.length);
+
+                winners.forEach(name => {
+                    if (name === currentUser) {
+                        creditWinningsToMain(winAmount);
+                        updateStatus(`🎉 You won! +${winAmount} coins (${betAmount} × ${playerNames.length} players)`,
+                            true);
+                    }
+                });
+
+                if (winners.length === 0) {
+                    winnersList.innerHTML = `<div class="no-winners">😔 No winners this round.</div>`;
+                    playNoWinnerAudio();
+                } else {
+                    let html = '';
+                    winners.forEach(name => {
+                        html += `
+                            <div class="winner-entry">
+                                <span class="player-name">${name}</span>
+                                <span class="winning-nums">🎯 ${winningNumber}</span>
+                            </div>
+                        `;
+                    });
+                    winnersList.innerHTML = html;
                 }
-            }
+                winnersModal.classList.add('active');
 
-            setTimeout(() => {
-                if (!isResultsCountdownRunning && engineState.gamePhase === 'results') {
-                    startResultsCountdown();
+                if (tg && tg.HapticFeedback) {
+                    if (winners.includes(currentUser)) {
+                        tg.HapticFeedback.notificationOccurred('success');
+                    }
                 }
-            }, 500);
 
-            setTimeout(() => {
-                winnersModal.classList.remove('active');
-            }, 4500);
+                setTimeout(() => {
+                    if (!isResultsCountdownRunning && engineState.gamePhase === 'results') {
+                        startResultsCountdown();
+                    }
+                }, 500);
+
+                setTimeout(() => {
+                    winnersModal.classList.remove('active');
+                }, 4500);
+            } catch (error) {
+                handleError(error, 'Check Winners');
+            }
         }
+
+        // ============================================================
+        //  TRANSACTION MODAL CLOSE
+        // ============================================================
+        transactionCloseBtn.onclick = () => {
+            transactionModal.classList.remove('active');
+            // Clean up listeners
+            Object.keys(transactionListeners).forEach(key => {
+                const ref = database.ref('transactions/' + key);
+                ref.off();
+                delete transactionListeners[key];
+            });
+        };
 
         // ============================================================
         //  EVENT BINDINGS
@@ -2558,7 +2847,6 @@
                 depositModal.classList.add('active');
             };
 
-            // Bet switcher buttons
             switchBet10.onclick = () => { switchBet(10); };
             switchBet20.onclick = () => { switchBet(20); };
 
@@ -2588,6 +2876,10 @@
                 }
                 stopTimer();
                 stopResultsCountdown();
+                if (spinTimeout) {
+                    clearTimeout(spinTimeout);
+                    spinTimeout = null;
+                }
                 isGameInitialized = false;
                 audioPlayedThisRound = false;
                 if (tg) {
@@ -2613,6 +2905,10 @@
                         }
                         stopTimer();
                         stopResultsCountdown();
+                        if (spinTimeout) {
+                            clearTimeout(spinTimeout);
+                            spinTimeout = null;
+                        }
                         isGameInitialized = false;
                         audioPlayedThisRound = false;
                         showWelcomeScreen();
