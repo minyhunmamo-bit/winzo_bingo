@@ -5,18 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Kelal Bingo · Rooms</title>
 
-    <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js">
     </script>
-
-    <!-- Firebase SDKs (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
     </script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js">
     </script>
 
     <style>
-        /* ===== STYLES ===== */
+        /* ===== STYLES (same as before, compact) ===== */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -1572,16 +1569,12 @@
         const NO_WINNER_AUDIO = "data:audio/wav;base64,YOUR_NO_WINNER_AUDIO_BASE64_HERE";
 
         function playAudio(audioData) {
-            if (!audioData || audioData.includes('YOUR_')) {
-                return;
-            }
+            if (!audioData || audioData.includes('YOUR_')) return;
             try {
                 const audio = new Audio(audioData);
                 audio.volume = 0.8;
                 audio.play().catch(e => console.log('Audio play error:', e));
-            } catch (e) {
-                console.log('Audio error:', e);
-            }
+            } catch (e) { console.log('Audio error:', e); }
         }
 
         function playGetReadyAudio() { playAudio(GET_READY_AUDIO); }
@@ -1595,7 +1588,7 @@
         let telegramUser = null;
         let isTelegram = false;
         let telegramDetectionAttempts = 0;
-        let maxTelegramAttempts = 5;
+        const maxTelegramAttempts = 5;
 
         function detectTelegramUser() {
             try {
@@ -1604,8 +1597,6 @@
                     tg.ready();
                     tg.expand();
                     isTelegram = true;
-
-                    // Try multiple ways to get user data
                     let user = null;
                     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                         user = tg.initDataUnsafe.user;
@@ -1615,7 +1606,6 @@
                             if (parsed.user) user = parsed.user;
                         } catch (e) {}
                     }
-
                     if (user) {
                         telegramUser = user;
                         const name = user.username || user.first_name || '';
@@ -1640,7 +1630,6 @@
             }
         }
 
-        // Try to detect Telegram user with retries
         function attemptTelegramDetection() {
             if (telegramDetectionAttempts >= maxTelegramAttempts) {
                 const infoEl = document.getElementById('telegramInfo');
@@ -1650,7 +1639,6 @@
                 }
                 return false;
             }
-
             telegramDetectionAttempts++;
             const detected = detectTelegramUser();
             if (!detected && telegramDetectionAttempts < maxTelegramAttempts) {
@@ -1676,6 +1664,7 @@
         let database = null;
         let isMultiplayer = false;
         let transactionListeners = {};
+        let userWalletRef = null;
 
         try {
             firebase.initializeApp(firebaseConfig);
@@ -1690,13 +1679,9 @@
         }
 
         // ============================================================
-        //  LOCAL DB (users & wallets)
+        //  LOCAL DB – only for session and bet
         // ============================================================
         const DB = {
-            getUsers() {
-                try { return JSON.parse(localStorage.getItem('bingo_users')) || {}; } catch { return {}; }
-            },
-            saveUsers(users) { localStorage.setItem('bingo_users', JSON.stringify(users)); },
             getCurrentUser() { return localStorage.getItem('bingo_current_user') || null; },
             setCurrentUser(username) {
                 if (username) localStorage.setItem('bingo_current_user', username);
@@ -1715,11 +1700,11 @@
         //  GLOBAL STATE
         // ============================================================
         let currentUser = null;
-        let users = {};
         let gameRef = null;
         let isGameInitialized = false;
         let currentBet = 10;
         let currentRoom = 'room_10';
+        let walletData = { main: 0, play: 0 };
 
         let engineState = {
             players: {},
@@ -1752,19 +1737,12 @@
             console.error(`Error in ${context}:`, error);
             const msg = error.message || 'An error occurred';
             updateStatus(`⚠️ ${msg}`);
-            if (tg && tg.HapticFeedback) {
-                tg.HapticFeedback.notificationOccurred('error');
-            }
+            if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
             return false;
         }
 
         function safeExecute(fn, context, fallback) {
-            try {
-                return fn();
-            } catch (e) {
-                handleError(e, context);
-                return fallback;
-            }
+            try { return fn(); } catch (e) { handleError(e, context); return fallback; }
         }
 
         // ============================================================
@@ -1851,78 +1829,30 @@
         }
 
         // ============================================================
-        //  TRANSACTION SYSTEM (Firebase)
+        //  WALLET SYNC (Firebase)
         // ============================================================
-        function requestTransaction(type, amount) {
-            if (!currentUser) return false;
-
-            return safeExecute(() => {
-                const txRef = database.ref('transactions').push();
-                const txData = {
-                    id: txRef.key,
-                    username: currentUser,
-                    type: type, // 'deposit' or 'withdraw'
-                    amount: parseInt(amount),
-                    status: 'pending',
-                    timestamp: Date.now(),
-                    playerMainWallet: users[currentUser].mainWallet || 0,
-                    playerPlayWallet: users[currentUser].playWallet || 0
-                };
-
-                txRef.set(txData);
-
-                // Show pending modal
-                transactionStatus.textContent = '⏳ Pending admin approval...';
-                transactionStatus.className = 'status-text pending';
-                transactionModal.classList.add('active');
-
-                // Listen for status changes
-                const listener = txRef.on('value', snapshot => {
-                    const data = snapshot.val();
-                    if (!data) return;
-
-                    if (data.status === 'approved') {
-                        transactionStatus.textContent = '✅ Approved! Transaction completed.';
-                        transactionStatus.className = 'status-text approved';
-
-                        // Update wallet
-                        loadUsers();
-                        if (type === 'deposit') {
-                            users[currentUser].playWallet = (users[currentUser].playWallet || 0) + parseInt(data.amount);
-                        } else {
-                            users[currentUser].mainWallet = (users[currentUser].mainWallet || 0) - parseInt(data.amount);
-                        }
-                        saveUsers();
-                        updateWalletUI();
-                        updateWelcomeUI();
-
-                        // Remove listener
-                        txRef.off();
-                        delete transactionListeners[txRef.key];
-
-                        if (tg && tg.HapticFeedback) {
-                            tg.HapticFeedback.notificationOccurred('success');
-                        }
-                    } else if (data.status === 'rejected') {
-                        transactionStatus.textContent = '❌ Rejected by admin.';
-                        transactionStatus.className = 'status-text rejected';
-                        txRef.off();
-                        delete transactionListeners[txRef.key];
-                    }
-                });
-
-                transactionListeners[txRef.key] = listener;
-                return true;
-            }, 'Transaction request', false);
+        function syncWalletFromFirebase() {
+            if (!currentUser || !database) return;
+            if (userWalletRef) {
+                userWalletRef.off();
+                userWalletRef = null;
+            }
+            const userRef = database.ref('users/' + currentUser);
+            userWalletRef = userRef;
+            userRef.on('value', snapshot => {
+                const data = snapshot.val();
+                if (data) {
+                    walletData.main = data.mainWallet || 0;
+                    walletData.play = data.playWallet || 0;
+                    updateWalletUI();
+                    updateWelcomeUI();
+                }
+            });
         }
 
         // ============================================================
         //  AUTH
         // ============================================================
-        function loadUsers() { users = DB.getUsers(); }
-
-        function saveUsers() { DB.saveUsers(users); }
-
         function showAuthScreen() {
             authScreen.style.display = 'flex';
             welcomeScreen.style.display = 'none';
@@ -1930,6 +1860,8 @@
             authError.textContent = '';
             setConnectionStatus(firebaseAvailable, firebaseAvailable ? '🌐 Connected' : '📡 Offline');
             DB.setSavedBet(null);
+            if (userWalletRef) { userWalletRef.off();
+                userWalletRef = null; }
             attemptTelegramDetection();
         }
 
@@ -1948,6 +1880,8 @@
                 showGameScreen();
                 initGameConnection();
             }
+            // Start wallet sync
+            syncWalletFromFirebase();
         }
 
         function showGameScreen() {
@@ -1980,36 +1914,42 @@
         function handleLogin() {
             const username = authUsername.value.trim();
             const password = authPassword.value.trim();
-            loadUsers();
             if (!username || !password) { authError.textContent = 'Please fill in all fields.'; return; }
-            if (!users[username]) {
-                users[username] = { password, mainWallet: 0, playWallet: 0 };
-                saveUsers();
-                authError.textContent = '✅ Account created!';
-            } else if (users[username].password !== password) {
-                authError.textContent = 'Invalid password.';
-                return;
-            }
-            currentUser = username;
-            DB.setCurrentUser(username);
-            authError.textContent = '';
-            showWelcomeScreen();
-            if (firebaseAvailable) {
-                setConnectionStatus(true);
-            }
+            if (!database) { authError.textContent = 'Firebase not available.'; return; }
+
+            const usersRef = database.ref('users');
+            usersRef.child(username).once('value', snapshot => {
+                const userData = snapshot.val();
+                if (!userData) {
+                    // Create new user
+                    usersRef.child(username).set({
+                        password: password,
+                        mainWallet: 0,
+                        playWallet: 0
+                    }).then(() => {
+                        authError.textContent = '✅ Account created!';
+                        currentUser = username;
+                        DB.setCurrentUser(username);
+                        showWelcomeScreen();
+                        setConnectionStatus(true);
+                    }).catch(err => {
+                        authError.textContent = 'Error creating account: ' + err.message;
+                    });
+                } else if (userData.password === password) {
+                    currentUser = username;
+                    DB.setCurrentUser(username);
+                    authError.textContent = '';
+                    showWelcomeScreen();
+                    setConnectionStatus(true);
+                } else {
+                    authError.textContent = 'Invalid password.';
+                }
+            });
         }
 
         function handleSignup() {
-            const username = authUsername.value.trim();
-            const password = authPassword.value.trim();
-            loadUsers();
-            if (!username || !password) { authError.textContent = 'Please fill in all fields.'; return; }
-            if (username.length < 3) { authError.textContent = 'Username must be at least 3 characters.'; return; }
-            if (password.length < 4) { authError.textContent = 'Password must be at least 4 characters.'; return; }
-            if (users[username]) { authError.textContent = 'Username already exists.'; return; }
-            users[username] = { password, mainWallet: 0, playWallet: 0 };
-            saveUsers();
-            authError.textContent = '✅ Account created! Please login.';
+            // Same as login, but we'll create if not exists
+            handleLogin();
         }
 
         function handleLogout() {
@@ -2018,7 +1958,10 @@
                 gameRef.off();
                 gameRef = null;
             }
-            // Clean up transaction listeners
+            if (userWalletRef) {
+                userWalletRef.off();
+                userWalletRef = null;
+            }
             Object.keys(transactionListeners).forEach(key => {
                 const ref = database.ref('transactions/' + key);
                 ref.off();
@@ -2045,7 +1988,7 @@
             if (!currentUser) return;
             if (amount === currentBet) return;
 
-            const wallet = getWallet(currentUser);
+            const wallet = walletData; // from Firebase sync
             if (wallet.play < amount) {
                 alert(`⚠️ Insufficient play balance (${wallet.play}/${amount}). Deposit to play.`);
                 return;
@@ -2075,14 +2018,12 @@
         // ============================================================
         function updateWelcomeUI() {
             if (!currentUser) return;
-            const wallet = getWallet(currentUser);
-            welcomeBalance.textContent = wallet.play;
+            welcomeBalance.textContent = walletData.play;
         }
 
         function selectBet(amount) {
             if (!currentUser) return;
-            const wallet = getWallet(currentUser);
-            if (wallet.play < amount) {
+            if (walletData.play < amount) {
                 alert('⚠️ Insufficient play balance. Please deposit.');
                 return;
             }
@@ -2107,22 +2048,77 @@
         });
 
         // ============================================================
-        //  WALLET
+        //  WALLET UI
         // ============================================================
-        function getWallet(username) {
-            loadUsers();
-            if (!users[username]) return { main: 0, play: 0 };
-            return { main: users[username].mainWallet || 0, play: users[username].playWallet || 0 };
-        }
-
         function updateWalletUI() {
             if (!currentUser) return;
-            const wallet = getWallet(currentUser);
-            mainWalletEl.textContent = wallet.main;
-            playWalletEl.textContent = wallet.play;
+            mainWalletEl.textContent = walletData.main;
+            playWalletEl.textContent = walletData.play;
             walletUsername.textContent = currentUser;
         }
 
+        // ============================================================
+        //  TRANSACTION SYSTEM (Firebase)
+        // ============================================================
+        function requestTransaction(type, amount) {
+            if (!currentUser) return false;
+
+            return safeExecute(() => {
+                const txRef = database.ref('transactions').push();
+                const txData = {
+                    id: txRef.key,
+                    username: currentUser,
+                    type: type,
+                    amount: parseInt(amount),
+                    status: 'pending',
+                    timestamp: Date.now(),
+                    playerMainWallet: walletData.main,
+                    playerPlayWallet: walletData.play
+                };
+
+                txRef.set(txData);
+
+                transactionStatus.textContent = '⏳ Pending admin approval...';
+                transactionStatus.className = 'status-text pending';
+                transactionModal.classList.add('active');
+
+                // Listen for status changes
+                const listener = txRef.on('value', snapshot => {
+                    const data = snapshot.val();
+                    if (!data) return;
+
+                    if (data.status === 'approved') {
+                        transactionStatus.textContent = '✅ Approved! Transaction completed.';
+                        transactionStatus.className = 'status-text approved';
+                        // Wallet will be updated via Firebase sync
+                        if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                        // Close modal after 2 seconds
+                        setTimeout(() => {
+                            transactionModal.classList.remove('active');
+                        }, 2000);
+                    } else if (data.status === 'rejected') {
+                        transactionStatus.textContent = '❌ Rejected by admin.';
+                        transactionStatus.className = 'status-text rejected';
+                        if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                        setTimeout(() => {
+                            transactionModal.classList.remove('active');
+                        }, 2000);
+                    }
+                    // Clean up listener if no longer pending
+                    if (data.status !== 'pending') {
+                        txRef.off();
+                        delete transactionListeners[txRef.key];
+                    }
+                });
+
+                transactionListeners[txRef.key] = listener;
+                return true;
+            }, 'Transaction request', false);
+        }
+
+        // ============================================================
+        //  DEPOSIT / WITHDRAW
+        // ============================================================
         function depositToPlay(amount) {
             if (!currentUser) return false;
             if (amount <= 0) { depositError.textContent = 'Enter a valid amount.'; return false; }
@@ -2134,8 +2130,7 @@
         function withdrawFromMain(amount) {
             if (!currentUser) return false;
             if (amount <= 0) { withdrawError.textContent = 'Enter a valid amount.'; return false; }
-            const wallet = getWallet(currentUser);
-            if (wallet.main < amount) { withdrawError.textContent = 'Insufficient main balance.'; return false; }
+            if (walletData.main < amount) { withdrawError.textContent = 'Insufficient main balance.'; return false; }
             withdrawError.textContent = '';
             withdrawModal.classList.remove('active');
             return requestTransaction('withdraw', amount);
@@ -2143,26 +2138,33 @@
 
         function deductBetFromPlay(betAmount) {
             if (!currentUser) return false;
-            loadUsers();
-            const play = users[currentUser].playWallet || 0;
-            if (play < betAmount) {
-                updateStatus(`⚠️ Insufficient play balance (${play}/${betAmount}). Deposit to play.`);
+            if (walletData.play < betAmount) {
+                updateStatus(`⚠️ Insufficient play balance (${walletData.play}/${betAmount}). Deposit to play.`);
                 return false;
             }
-            users[currentUser].playWallet = play - betAmount;
-            saveUsers();
-            updateWalletUI();
-            updateWelcomeUI();
+            // Deduct from Firebase directly (no admin needed for game bets)
+            const userRef = database.ref('users/' + currentUser);
+            userRef.transaction(current => {
+                if (current) {
+                    const play = current.playWallet || 0;
+                    if (play >= betAmount) {
+                        current.playWallet = play - betAmount;
+                    }
+                }
+                return current;
+            });
             return true;
         }
 
         function creditWinningsToMain(winAmount) {
             if (!currentUser) return false;
-            loadUsers();
-            users[currentUser].mainWallet = (users[currentUser].mainWallet || 0) + winAmount;
-            saveUsers();
-            updateWalletUI();
-            updateWelcomeUI();
+            const userRef = database.ref('users/' + currentUser);
+            userRef.transaction(current => {
+                if (current) {
+                    current.mainWallet = (current.mainWallet || 0) + winAmount;
+                }
+                return current;
+            });
             return true;
         }
 
@@ -2220,7 +2222,7 @@
         }
 
         // ============================================================
-        //  SYNC GAME STATE – WITH FIXED SPINNING
+        //  SYNC GAME STATE
         // ============================================================
         function syncGameState(data) {
             const players = data.players || {};
@@ -2501,8 +2503,7 @@
             const isLocked = engineState.gamePhase !== 'selection';
 
             const bet = currentBet;
-            const wallet = getWallet(currentUser);
-            const betLock = bet > wallet.play;
+            const betLock = bet > walletData.play;
 
             let html = '';
             for (let i = 1; i <= 200; i++) {
@@ -2534,9 +2535,8 @@
             if (isNaN(num)) return;
 
             const bet = currentBet;
-            const wallet = getWallet(currentUser);
-            if (bet > wallet.play) {
-                updateStatus(`⚠️ Insufficient play balance (${wallet.play}/${bet}). Deposit to play.`);
+            if (bet > walletData.play) {
+                updateStatus(`⚠️ Insufficient play balance (${walletData.play}/${bet}). Deposit to play.`);
                 return;
             }
 
@@ -2578,11 +2578,14 @@
             }
 
             if (newPick === null && currentPick !== null) {
-                loadUsers();
-                users[currentUser].playWallet = (users[currentUser].playWallet || 0) + bet;
-                saveUsers();
-                updateWalletUI();
-                updateWelcomeUI();
+                // Refund bet
+                const userRef = database.ref('users/' + currentUser);
+                userRef.transaction(current => {
+                    if (current) {
+                        current.playWallet = (current.playWallet || 0) + bet;
+                    }
+                    return current;
+                });
             }
 
             if (gameRef) {
@@ -2606,7 +2609,7 @@
         });
 
         // ============================================================
-        //  WHEEL – FIXED SPINNING
+        //  WHEEL
         // ============================================================
         function updateWheel() {
             const numbers = Array.from(engineState.allTakenNumbers);
@@ -2652,18 +2655,11 @@
         }
 
         // ============================================================
-        //  SPIN EXECUTION – FIXED: No freezing
+        //  SPIN EXECUTION – FIXED
         // ============================================================
         function executeSpin() {
-            // Prevent multiple spins
-            if (engineState.isSpinning) {
-                console.log('Spin already in progress');
-                return;
-            }
-            if (engineState.gamePhase !== 'spinning') {
-                console.log('Not in spinning phase');
-                return;
-            }
+            if (engineState.isSpinning) return;
+            if (engineState.gamePhase !== 'spinning') return;
 
             engineState.isSpinning = true;
             engineState.spinInProgress = true;
@@ -2682,17 +2678,13 @@
 
                 const winningNumber = numbers[Math.floor(Math.random() * numbers.length)];
                 const targetAngle = getAngleForNumber(winningNumber);
-                const fullRotations = 4 + Math.floor(Math.random() * 2); // 4-5 rotations
+                const fullRotations = 4 + Math.floor(Math.random() * 2);
                 const extraDegrees = 360 * fullRotations + targetAngle;
 
-                // Reset transition and apply rotation
                 arrowContainer.style.transition = 'none';
                 arrowContainer.style.transform = 'rotate(0deg)';
-                
-                // Force reflow
                 void arrowContainer.offsetHeight;
 
-                // Apply the spin with smooth transition
                 arrowContainer.style.transition = `transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)`;
                 arrowContainer.style.transform = `rotate(${extraDegrees}deg)`;
 
@@ -2700,7 +2692,6 @@
                 engineState.drawnNumbers.push(winningNumber);
                 engineState.spinCount++;
 
-                // Update Firebase
                 gameRef.update({
                     drawnNumbers: engineState.drawnNumbers,
                     spinCount: engineState.spinCount,
@@ -2708,7 +2699,6 @@
                     timer: 5
                 });
 
-                // Update UI elements immediately
                 arrowCenter.textContent = winningNumber;
                 arrowCenter.classList.add('reveal');
                 spinEls[0].textContent = winningNumber;
@@ -2718,19 +2708,13 @@
                 updateStatus(`🎯 Winning number: <span class="highlight">${winningNumber}</span>`);
                 updateWheel();
 
-                // Clear any existing timeout
                 if (spinTimeout) clearTimeout(spinTimeout);
-
-                // Set timeout to complete the spin
                 spinTimeout = setTimeout(() => {
                     spinningIndicator.classList.remove('active');
                     engineState.isSpinning = false;
                     engineState.spinInProgress = false;
                     spinTimeout = null;
-
-                    // Update game state
                     gameRef.update({ gameState: 'results' });
-                    
                     setTimeout(() => {
                         checkAndAnnounceWinners();
                     }, 1000);
@@ -2820,7 +2804,6 @@
         // ============================================================
         transactionCloseBtn.onclick = () => {
             transactionModal.classList.remove('active');
-            // Clean up listeners
             Object.keys(transactionListeners).forEach(key => {
                 const ref = database.ref('transactions/' + key);
                 ref.off();
@@ -2840,8 +2823,7 @@
 
             welcomeLogoutBtn.onclick = handleLogout;
             welcomeDepositBtn.onclick = () => {
-                const wallet = getWallet(currentUser);
-                depositPlayBalance.textContent = wallet.play;
+                depositPlayBalance.textContent = walletData.play;
                 depositError.textContent = '';
                 depositAmount.value = '';
                 depositModal.classList.add('active');
@@ -2853,16 +2835,14 @@
             moreBtn.onclick = toggleMoreDropdown;
 
             depositBtn.onclick = () => {
-                const wallet = getWallet(currentUser);
-                depositPlayBalance.textContent = wallet.play;
+                depositPlayBalance.textContent = walletData.play;
                 depositError.textContent = '';
                 depositAmount.value = '';
                 depositModal.classList.add('active');
                 closeMoreDropdown();
             };
             withdrawBtn.onclick = () => {
-                const wallet = getWallet(currentUser);
-                withdrawMainBalance.textContent = wallet.main;
+                withdrawMainBalance.textContent = walletData.main;
                 withdrawError.textContent = '';
                 withdrawAmount.value = '';
                 withdrawModal.classList.add('active');
@@ -2920,12 +2900,11 @@
             }
 
             const savedUser = DB.getCurrentUser();
-            loadUsers();
-
-            if (savedUser && users[savedUser]) {
+            if (savedUser && firebaseAvailable) {
                 currentUser = savedUser;
+                syncWalletFromFirebase();
                 showWelcomeScreen();
-                if (firebaseAvailable) setConnectionStatus(true);
+                setConnectionStatus(true);
             } else {
                 showAuthScreen();
             }
