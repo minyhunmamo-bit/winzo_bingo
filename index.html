@@ -13,7 +13,7 @@
     </script>
 
     <style>
-        /* ===== STYLES (same as before, compact) ===== */
+        /* ===== STYLES – compact & clean ===== */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -1530,6 +1530,83 @@
     <!-- ============================================================ -->
     <script>
         // ============================================================
+        //  FIREBASE SECURITY RULES (must be deployed in Firebase Console)
+        //  ============================================================
+        //  Copy and paste the following rules into your Firebase Realtime Database Rules:
+        //
+        //  {
+        //    "rules": {
+        //      "rooms": {
+        //        "$roomId": {
+        //          ".read": "auth != null",
+        //          ".write": "auth != null",
+        //          "timer": {
+        //            ".validate": "
+        //              ( // 1️⃣ Normal countdown: decrement by 1
+        //                newData.isNumber() &&
+        //                newData.val() === data.val() - 1 &&
+        //                data.val() > 0 &&
+        //                data.parent().child('gameState').val() === 'selection'
+        //              ) ||
+        //              ( // 2️⃣ Reset to 30 after round ends (timer == 0)
+        //                newData.val() === 30 &&
+        //                data.val() === 0 &&
+        //                data.parent().child('gameState').val() === 'selection'
+        //              ) ||
+        //              ( // 3️⃣ Set to 5 after spinning (spin phase or results)
+        //                newData.val() === 5 &&
+        //                data.val() > 0 &&
+        //                (data.parent().child('gameState').val() === 'spinning' ||
+        //                 data.parent().child('gameState').val() === 'results')
+        //              )
+        //            "
+        //          },
+        //          "gameState": {
+        //            ".validate": "
+        //              newData.isString() &&
+        //              (newData.val() === 'selection' ||
+        //               newData.val() === 'spinning' ||
+        //               newData.val() === 'results')
+        //            "
+        //          },
+        //          "players": {
+        //            "$playerId": {
+        //              ".write": "auth.uid === $playerId || auth.token.admin === true",
+        //              ".validate": "newData.hasChildren(['name', 'pick', 'bet', 'ready'])"
+        //            }
+        //          },
+        //          "$other": {
+        //            ".validate": "
+        //              newData.isNumber() || newData.isString() || newData.isBoolean()
+        //            "
+        //          }
+        //        }
+        //      },
+        //      "users": {
+        //        "$uid": {
+        //          ".read": "auth.uid === $uid",
+        //          ".write": "auth.uid === $uid",
+        //          "mainWallet": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+        //          "playWallet": { ".validate": "newData.isNumber() && newData.val() >= 0" }
+        //        }
+        //      },
+        //      "transactions": {
+        //        ".read": "auth != null",
+        //        ".write": "auth != null",
+        //        "$txId": {
+        //          ".validate": "
+        //            newData.hasChildren(['username', 'type', 'amount', 'status', 'timestamp']) &&
+        //            (newData.child('status').val() === 'pending' ||
+        //             newData.child('status').val() === 'approved' ||
+        //             newData.child('status').val() === 'rejected')
+        //          "
+        //        }
+        //      }
+        //    }
+        //  }
+        // ============================================================
+
+        // ============================================================
         //  AUDIO FUNCTIONS – REPLACE WITH YOUR BASE64 AUDIO DATA
         // ============================================================
         const GET_READY_AUDIO = "data:audio/wav;base64,YOUR_GET_READY_AUDIO_BASE64_HERE";
@@ -2175,7 +2252,7 @@
         }
 
         // ============================================================
-        //  GAME CONNECTION
+        //  GAME CONNECTION – WITH STUCK SPIN DETECTION
         // ============================================================
         function initGameConnection() {
             if (isGameInitialized) {
@@ -2188,7 +2265,6 @@
             const roomPath = currentRoom;
             gameRef = database.ref('rooms/' + roomPath);
 
-            // Ensure room exists and is initialized
             gameRef.once('value', snapshot => {
                 if (!snapshot.exists()) {
                     const initData = {
@@ -2205,11 +2281,10 @@
                     };
                     gameRef.set(initData);
                 } else {
-                    // If room data exists but might be stuck, check and reset
                     const data = snapshot.val();
                     if (data.gameState === 'spinning' && data.spinCount === 0 && !data.winners) {
-                        // Stuck in spinning without progress – reset
                         console.warn('Room was stuck in spinning with no progress. Resetting.');
+                        // Use atomic update to reset
                         gameRef.update({ gameState: 'selection', timer: 30 });
                     }
                 }
@@ -2235,7 +2310,7 @@
         }
 
         // ============================================================
-        //  SYNC GAME STATE – FIXED: handles stuck spin
+        //  SYNC GAME STATE – FIXED: uses atomic updates only
         // ============================================================
         function syncGameState(data) {
             const players = data.players || {};
@@ -2268,9 +2343,7 @@
 
             updateUIFromState();
 
-            // ---- FIX: DETECT AND RESOLVE STUCK SPIN ----
-            // If gamePhase is 'spinning' but spinCount is 0 and no spin is in progress,
-            // it means the spin was triggered but never executed. Start it now.
+            // ---- STUCK SPIN DETECTION ----
             if (engineState.gamePhase === 'spinning' && engineState.spinCount === 0 && !engineState.isSpinning && !engineState
                 .spinInProgress) {
                 console.warn('Detected stuck spin. Executing spin now.');
@@ -2293,9 +2366,8 @@
                     audioPlayedThisRound = true;
                 }
                 setTimeout(() => {
+                    // Atomic update to spinning
                     gameRef.update({ gameState: 'spinning' });
-                    // The spin will be triggered either by the detection above or by the timer's transaction
-                    // But we also set a timeout to call executeSpin directly in case the state change is missed.
                     setTimeout(() => {
                         if (engineState.gamePhase === 'spinning' && !engineState.isSpinning && engineState.spinCount === 0) {
                             executeSpin();
@@ -2305,7 +2377,14 @@
             }
 
             if (engineState.gamePhase === 'selection' && engineState.timer <= 0 && engineState.activePlayersCount === 0) {
-                gameRef.update({ timer: 30 });
+                // Reset timer using transaction
+                gameRef.child('timer').transaction(current => {
+                    if (current === null || current === undefined || typeof current !== 'number') {
+                        return 30;
+                    }
+                    if (current === 0) return 30;
+                    return current;
+                });
                 if (!isTimerRunning) startTimer();
             }
 
@@ -2315,7 +2394,7 @@
         }
 
         // ============================================================
-        //  TIMER
+        //  TIMER – FIXED: transaction only, no fallback set
         // ============================================================
         function startTimer() {
             if (timerInterval) {
@@ -2324,6 +2403,8 @@
             }
             if (isTimerRunning) return;
             if (engineState.gamePhase !== 'selection') return;
+            if (!gameRef) return;
+
             isTimerRunning = true;
 
             timerInterval = setInterval(() => {
@@ -2336,32 +2417,38 @@
                     return;
                 }
 
+                // Atomic transaction: decrement by 1 only if timer > 0 and gameState is 'selection'
                 gameRef.child('timer').transaction(current => {
-                    if (current === null || current === undefined) return 30;
-                    if (current <= 0) return 0;
-                    return current - 1;
+                    if (current === null || current === undefined || typeof current !== 'number') {
+                        return 30;
+                    }
+                    if (current > 0) {
+                        return current - 1;
+                    }
+                    return current;
                 }, (error, committed, snapshot) => {
                     if (error) {
                         handleError(error, 'Timer transaction');
-                        // If transaction fails, we can still try to decrement locally? But we need sync.
-                        // So we'll just log and continue.
+                        // No fallback set – the security rules will reject invalid writes
                         return;
                     }
-                    if (committed && snapshot) {
+                    if (committed) {
                         const newVal = snapshot.val();
-                        if (newVal === 0) {
-                            if (engineState.activePlayersCount >= 1) {
-                                if (!audioPlayedThisRound) {
-                                    playGetReadyAudio();
-                                    audioPlayedThisRound = true;
-                                }
-                                setTimeout(() => {
-                                    gameRef.update({ gameState: 'spinning' });
-                                    // We'll rely on syncGameState to trigger the spin.
-                                }, 1000);
-                            } else {
-                                gameRef.update({ timer: 30 });
+                        if (newVal === 0 && engineState.activePlayersCount >= 1) {
+                            if (!audioPlayedThisRound) {
+                                playGetReadyAudio();
+                                audioPlayedThisRound = true;
                             }
+                            gameRef.update({ gameState: 'spinning' });
+                        } else if (newVal === 0 && engineState.activePlayersCount === 0) {
+                            // Use transaction to reset to 30
+                            gameRef.child('timer').transaction(current => {
+                                if (current === null || current === undefined || typeof current !== 'number') {
+                                    return 30;
+                                }
+                                if (current === 0) return 30;
+                                return current;
+                            });
                         }
                     }
                 });
@@ -2377,7 +2464,7 @@
         }
 
         // ============================================================
-        //  RESULTS COUNTDOWN
+        //  RESULTS COUNTDOWN – uses atomic update to reset
         // ============================================================
         function startResultsCountdown() {
             if (isResultsCountdownRunning) return;
@@ -2390,6 +2477,7 @@
                 if (countdown <= 0) {
                     stopResultsCountdown();
                     if (gameRef) {
+                        // Atomic update: reset everything for next round
                         const updates = {
                             gameState: 'selection',
                             round: engineState.roundNumber + 1,
@@ -2405,6 +2493,7 @@
                             updates['players/' + name + '/ready'] = false;
                         });
                         gameRef.update(updates);
+
                         engineState.allTakenNumbers = new Set();
                         engineState.drawnNumbers = [];
                         audioPlayedThisRound = false;
@@ -2654,7 +2743,7 @@
         }
 
         // ============================================================
-        //  SPIN EXECUTION – FIXED
+        //  SPIN EXECUTION – FIXED: sets timer to 5 as part of atomic update
         // ============================================================
         function executeSpin() {
             if (engineState.isSpinning) {
@@ -2697,6 +2786,7 @@
                 engineState.drawnNumbers.push(winningNumber);
                 engineState.spinCount++;
 
+                // Atomic update: set drawn numbers, spinCount, cumulativeRotation, and timer to 5
                 gameRef.update({
                     drawnNumbers: engineState.drawnNumbers,
                     spinCount: engineState.spinCount,
@@ -2719,6 +2809,7 @@
                     engineState.isSpinning = false;
                     engineState.spinInProgress = false;
                     spinTimeout = null;
+                    // Move to results with timer 5 (already set)
                     gameRef.update({ gameState: 'results' });
                     setTimeout(() => {
                         checkAndAnnounceWinners();
@@ -2733,7 +2824,7 @@
                     clearTimeout(spinTimeout);
                     spinTimeout = null;
                 }
-                // If spin fails, reset to selection to avoid lock
+                // Reset using atomic update
                 gameRef.update({ gameState: 'selection', timer: 30 });
             }
         }
